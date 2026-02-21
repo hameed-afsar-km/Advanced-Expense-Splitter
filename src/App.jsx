@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List } from 'lucide-react';
 
 function App() {
   const [trips, setTrips] = useState([]);
@@ -109,7 +109,8 @@ function App() {
       endDate,
       numberOfDays,
       createdAt: new Date().toISOString(),
-      members: []
+      members: [],
+      logs: []
     };
 
     const prevTrips = [...trips];
@@ -159,13 +160,14 @@ function App() {
     if (!selectedMembers.length || isNaN(amount)) return;
 
     const y = amount / selectedMembers.length;
+    const expenseName = formData.get('expenseName') || 'Unnamed Expense';
 
     updateTrip(currentTripId, trip => {
       const newMembers = trip.members.map(member => {
         if (!selectedMembers.includes(member.id)) return member;
 
         const newExpense = member.expense + y;
-        const newRemaining = member.received >= newExpense ? member.received - newExpense : 0;
+        const newRemaining = member.remaining - y;
 
         return {
           ...member,
@@ -173,7 +175,18 @@ function App() {
           remaining: newRemaining
         };
       });
-      return { ...trip, members: newMembers };
+
+      const newLog = {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        action: 'Add Expense',
+        description: expenseName,
+        amount: amount,
+        splitAmount: y,
+        memberIds: selectedMembers
+      };
+
+      return { ...trip, members: newMembers, logs: [...(trip.logs || []), newLog] };
     });
     closeModal();
   };
@@ -191,7 +204,7 @@ function App() {
         if (!selectedMembers.includes(member.id)) return member;
 
         const newReceived = member.received + amount;
-        const newRemaining = newReceived >= member.expense ? newReceived - member.expense : 0;
+        const newRemaining = member.remaining + amount;
 
         return {
           ...member,
@@ -199,7 +212,17 @@ function App() {
           remaining: newRemaining
         };
       });
-      return { ...trip, members: newMembers };
+
+      const newLog = {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        action: 'Add Amount',
+        description: 'Amount Added',
+        amount: amount,
+        memberIds: selectedMembers
+      };
+
+      return { ...trip, members: newMembers, logs: [...(trip.logs || []), newLog] };
     });
     closeModal();
   };
@@ -217,10 +240,21 @@ function App() {
         if (!selectedMembers.includes(member.id)) return member;
         return {
           ...member,
-          toGive: member.toGive + amount
+          toGive: member.toGive + amount,
+          remaining: member.remaining + amount
         };
       });
-      return { ...trip, members: newMembers };
+
+      const newLog = {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        action: 'To Give',
+        description: 'To Give',
+        amount: amount,
+        memberIds: selectedMembers
+      };
+
+      return { ...trip, members: newMembers, logs: [...(trip.logs || []), newLog] };
     });
     closeModal();
   };
@@ -238,43 +272,63 @@ function App() {
         if (!selectedMembers.includes(member.id)) return member;
         return {
           ...member,
-          toGet: member.toGet + amount
+          toGet: member.toGet + amount,
+          remaining: member.remaining - amount
         };
       });
-      return { ...trip, members: newMembers };
+
+      const newLog = {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        action: 'To Get',
+        description: 'To Get',
+        amount: amount,
+        memberIds: selectedMembers
+      };
+
+      return { ...trip, members: newMembers, logs: [...(trip.logs || []), newLog] };
     });
     closeModal();
   };
 
   const handleResetStats = () => {
     if (window.confirm('Are you sure you want to reset all data for these members to zero?')) {
-      updateTrip(currentTripId, trip => ({
-        ...trip,
-        members: trip.members.map(m => ({
-          ...m,
-          received: 0,
-          expense: 0,
-          toGive: 0,
-          toGet: 0,
-          remaining: 0
-        }))
-      }));
+      updateTrip(currentTripId, trip => {
+        const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Reset Data', description: 'Reset all members data to zero.', memberIds: [] };
+        return {
+          ...trip,
+          members: trip.members.map(m => ({
+            ...m,
+            received: 0,
+            expense: 0,
+            toGive: 0,
+            toGet: 0,
+            remaining: 0
+          })),
+          logs: [...(trip.logs || []), newLog]
+        };
+      });
     }
   };
 
   const handleResetMemberStats = (memberId) => {
     if (window.confirm('Are you sure you want to reset all data for this member to zero?')) {
-      updateTrip(currentTripId, trip => ({
-        ...trip,
-        members: trip.members.map(m => m.id === memberId ? {
-          ...m,
-          received: 0,
-          expense: 0,
-          toGive: 0,
-          toGet: 0,
-          remaining: 0
-        } : m)
-      }));
+      updateTrip(currentTripId, trip => {
+        const member = trip.members.find(m => m.id === memberId);
+        const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Reset Member', description: `Reset data for ${member?.name} to zero.`, memberIds: [memberId] };
+        return {
+          ...trip,
+          members: trip.members.map(m => m.id === memberId ? {
+            ...m,
+            received: 0,
+            expense: 0,
+            toGive: 0,
+            toGet: 0,
+            remaining: 0
+          } : m),
+          logs: [...(trip.logs || []), newLog]
+        };
+      });
     }
   };
 
@@ -400,9 +454,14 @@ function App() {
           <div className="glass p-6 mb-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Quick Actions</h3>
-              <button className="btn btn-danger text-sm px-4 py-2" onClick={handleResetStats}>
-                <RefreshCw size={16} /> Reset Data
-              </button>
+              <div className="flex gap-2">
+                <button className="btn btn-secondary text-sm px-4 py-2" onClick={() => openModal('VIEW_TRIP_LOGS')}>
+                  <FileText size={16} /> Logs
+                </button>
+                <button className="btn btn-danger text-sm px-4 py-2" onClick={handleResetStats}>
+                  <RefreshCw size={16} /> Reset Data
+                </button>
+              </div>
             </div>
             <div className="actions-grid mt-0">
               <button className="btn btn-primary" onClick={() => openModal('ADD_EXPENSE')}>
@@ -449,6 +508,9 @@ function App() {
                 <div className="flex items-center justify-between w-full mb-2 border-b border-glass pb-4" style={{ borderColor: 'var(--border-glass)' }}>
                   <h3 className="text-xl font-bold">{member.name}</h3>
                   <div className="flex gap-2">
+                    <button className="btn btn-secondary text-sm px-3 py-1" onClick={() => openModal('VIEW_MEMBER_LOGS', member.id)}>
+                      <List size={14} /> Details
+                    </button>
                     <button className="btn btn-secondary text-sm px-3 py-1" onClick={() => handleResetMemberStats(member.id)}>
                       <RefreshCw size={14} /> Reset
                     </button>
@@ -480,7 +542,9 @@ function App() {
                   </div>
                   <div className="stat-box">
                     <div className="stat-label">Remaining</div>
-                    <div className="stat-value">${member.remaining.toFixed(2)}</div>
+                    <div className="stat-value" style={{ color: member.remaining < 0 ? 'var(--danger)' : 'inherit' }}>
+                      ${member.remaining.toFixed(2)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -570,7 +634,7 @@ function App() {
               <label className="input-label" style={{ marginBottom: 0 }}>Select Members</label>
               <button
                 type="button"
-                className="text-accent-1 text-sm font-medium"
+                className="text-accent-1 text-sm font-medium select-button"
                 style={{ textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
                 onClick={(e) => {
                   const form = e.target.closest('form');
@@ -607,6 +671,84 @@ function App() {
             <button type="submit" className="btn btn-primary">{config.btn}</button>
           </div>
         </form>
+      );
+    }
+    else if (modalState.type === 'VIEW_TRIP_LOGS') {
+      title = 'Trip Logs';
+      const logs = currentTrip?.logs || [];
+      content = (
+        <div className="flex flex-col gap-4">
+          {logs.length === 0 ? (
+            <p className="text-muted text-center py-4">No activity logged yet.</p>
+          ) : (
+            <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2">
+              {logs.slice().reverse().map(log => (
+                <div key={log.id} className="p-3 glass" style={{ borderRadius: '8px' }}>
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="font-bold text-accent-1">{log.action}</span>
+                    <span className="text-xs text-muted">{new Date(log.date).toLocaleString()}</span>
+                  </div>
+                  <p className="text-sm m-0">{log.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex justify-end mt-2">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Close</button>
+          </div>
+        </div>
+      );
+    }
+    else if (modalState.type === 'VIEW_MEMBER_LOGS') {
+      const memberId = modalState.data;
+      const member = currentTrip?.members.find(m => m.id === memberId);
+      title = `Expense Details: ${member?.name}`;
+
+      const memberLogs = (currentTrip?.logs || []).filter(log => log.memberIds?.includes(memberId));
+
+      content = (
+        <div className="flex flex-col gap-4">
+          {memberLogs.length === 0 ? (
+            <p className="text-muted text-center py-4">No events found for this member.</p>
+          ) : (
+            <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2">
+              {memberLogs.slice().reverse().map(log => {
+                let amountEffect = "";
+                let colorClass = "";
+                let titleText = log.description;
+
+                if (log.action === 'Add Expense') {
+                  amountEffect = `-$${log.splitAmount?.toFixed(2)}`;
+                  colorClass = "text-danger";
+                } else if (log.action === 'Add Amount') {
+                  amountEffect = `+$${log.amount?.toFixed(2)}`;
+                  colorClass = "text-success";
+                } else if (log.action === 'To Give') {
+                  amountEffect = `+$${log.amount?.toFixed(2)}`;
+                  colorClass = "text-success";
+                } else if (log.action === 'To Get') {
+                  amountEffect = `-$${log.amount?.toFixed(2)}`;
+                  colorClass = "text-danger";
+                }
+
+                return (
+                  <div key={log.id} className="p-3 glass" style={{ borderRadius: '8px' }}>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-sm text-accent-1">{titleText}</div>
+                        <div className="text-xs text-muted">{new Date(log.date).toLocaleString()}</div>
+                      </div>
+                      <div className={`font-bold ${colorClass}`}>{amountEffect}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex justify-end mt-2">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Close</button>
+          </div>
+        </div>
       );
     }
 
