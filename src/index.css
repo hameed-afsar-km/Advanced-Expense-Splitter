@@ -93,6 +93,10 @@ body {
   padding: 1rem;
 }
 
+.select-button {
+  color: rgba(232, 232, 252, 0.3);
+}
+
 @media (min-width: 768px) {
   .container {
     padding: 2rem;
@@ -525,4 +529,60 @@ body {
   border-radius: 999px;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+/* Toast Notification */
+.toast-container {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 1rem;
+  min-width: 300px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  animation: slideInRight 0.3s ease forwards;
+  overflow: hidden;
+}
+
+.toast-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.toast-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  width: 100%;
+  animation: shrinkWidth 3s linear forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shrinkWidth {
+  from {
+    width: 100%;
+  }
+
+  to {
+    width: 0%;
+  }
 }

@@ -1,17 +1,78 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw } from 'lucide-react';
 
 function App() {
   const [trips, setTrips] = useState([]);
   const [currentTripId, setCurrentTripId] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  // Home query state
+  const [homeSearchTerm, setHomeSearchTerm] = useState('');
+  const [homeSortBy, setHomeSortBy] = useState('date-desc');
+  const [homeFilterType, setHomeFilterType] = useState('all');
+  const [homeDateFrom, setHomeDateFrom] = useState('');
+  const [homeDateTo, setHomeDateTo] = useState('');
+
+  // Trip query state
+  const [tripSearchTerm, setTripSearchTerm] = useState('');
+
+  // Modal query state
+  const [modalSearchTerm, setModalSearchTerm] = useState('');
 
   // Modals state
   const [modalState, setModalState] = useState({ isOpen: false, type: null, data: null });
 
   const currentTrip = useMemo(() => trips.find(t => t.id === currentTripId), [trips, currentTripId]);
 
-  const updateTrip = (tripId, updater) => {
-    setTrips(prev => prev.map(t => (t.id === tripId ? updater(t) : t)));
+  const filteredTrips = useMemo(() => {
+    return trips
+      .filter(trip => {
+        const searchRaw = homeSearchTerm.toLowerCase();
+        const matchSearch = trip.tripName.toLowerCase().includes(searchRaw) ||
+          trip.startDate.includes(searchRaw) ||
+          (trip.endDate && trip.endDate.includes(searchRaw));
+        if (!matchSearch) return false;
+
+        if (homeFilterType === 'single' && !trip.isSingleDay) return false;
+        if (homeFilterType === 'multi' && trip.isSingleDay) return false;
+
+        const tStart = new Date(trip.startDate);
+        if (homeDateFrom && tStart < new Date(homeDateFrom)) return false;
+        if (homeDateTo && tStart > new Date(homeDateTo)) return false;
+
+        return true;
+      })
+      .sort((a, b) => {
+        switch (homeSortBy) {
+          case 'date-asc': return new Date(a.startDate) - new Date(b.startDate);
+          case 'date-desc': return new Date(b.startDate) - new Date(a.startDate);
+          case 'name-asc': return a.tripName.localeCompare(b.tripName);
+          case 'name-desc': return b.tripName.localeCompare(a.tripName);
+          default: return 0;
+        }
+      });
+  }, [trips, homeSearchTerm, homeFilterType, homeDateFrom, homeDateTo, homeSortBy]);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const handleUndo = () => {
+    if (toast && toast.previousState) {
+      setTrips(toast.previousState);
+      setToast(null);
+    }
+  };
+
+  const updateTrip = (tripId, updater, undoMessage = "Action successful") => {
+    const prevTrips = [...trips];
+    setTrips(prevTrips.map(t => (t.id === tripId ? updater(t) : t)));
+    setToast({ message: undoMessage, previousState: prevTrips, id: Date.now() });
   };
 
   const openModal = (type, data = null) => {
@@ -20,6 +81,7 @@ function App() {
 
   const closeModal = () => {
     setModalState({ isOpen: false, type: null, data: null });
+    setModalSearchTerm('');
   };
 
   // ---- Trip Methods ----
@@ -50,7 +112,9 @@ function App() {
       members: []
     };
 
+    const prevTrips = [...trips];
     setTrips([...trips, newTrip]);
+    setToast({ message: "Trip created", previousState: prevTrips, id: Date.now() });
     closeModal();
   };
 
@@ -225,15 +289,47 @@ function App() {
         </button>
       </div>
 
-      <div className="trip-grid mt-8">
-        {trips.length === 0 ? (
+      <div className="glass p-4 mt-8 mb-8 flex flex-wrap gap-4 items-end">
+        <div className="flex-1 min-w-[200px]">
+          <label className="input-label">Search Trips/Date</label>
+          <input type="text" className="input-base" placeholder="Name or Date..." value={homeSearchTerm} onChange={e => setHomeSearchTerm(e.target.value)} />
+        </div>
+        <div>
+          <label className="input-label">Type</label>
+          <select className="input-base" value={homeFilterType} onChange={e => setHomeFilterType(e.target.value)} style={{ width: '130px' }}>
+            <option value="all" style={{ background: '#13131a' }}>All Types</option>
+            <option value="single" style={{ background: '#13131a' }}>Single Day</option>
+            <option value="multi" style={{ background: '#13131a' }}>Multi Day</option>
+          </select>
+        </div>
+        <div>
+          <label className="input-label">Sort</label>
+          <select className="input-base" value={homeSortBy} onChange={e => setHomeSortBy(e.target.value)} style={{ width: '150px' }}>
+            <option value="date-desc" style={{ background: '#13131a' }}>Newest First</option>
+            <option value="date-asc" style={{ background: '#13131a' }}>Oldest First</option>
+            <option value="name-asc" style={{ background: '#13131a' }}>Name (A-Z)</option>
+            <option value="name-desc" style={{ background: '#13131a' }}>Name (Z-A)</option>
+          </select>
+        </div>
+        <div>
+          <label className="input-label">From Date</label>
+          <input type="date" className="input-base" value={homeDateFrom} onChange={e => setHomeDateFrom(e.target.value)} />
+        </div>
+        <div>
+          <label className="input-label">To Date</label>
+          <input type="date" className="input-base" value={homeDateTo} onChange={e => setHomeDateTo(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="trip-grid mt-6">
+        {filteredTrips.length === 0 ? (
           <div className="empty-state w-full" style={{ gridColumn: '1 / -1' }}>
             <Calendar size={48} className="text-muted mb-4 mx-auto" opacity={0.5} />
-            <h3 className="text-xl mb-2">No trips yet</h3>
-            <p className="text-muted">Create your first trip or day to start tracking expenses.</p>
+            <h3 className="text-xl mb-2">No trips found</h3>
+            <p className="text-muted">{trips.length === 0 ? "Create your first trip or day to start tracking expenses." : "Adjust your search or filters to find trips."}</p>
           </div>
         ) : (
-          trips.map(trip => {
+          filteredTrips.map(trip => {
             const totalSpent = trip.members.reduce((acc, m) => acc + m.expense, 0);
             return (
               <div key={trip.id} className="glass-card trip-card-content" onClick={() => setCurrentTripId(trip.id)}>
@@ -325,11 +421,20 @@ function App() {
           </div>
         )}
 
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
           <h2 className="text-2xl font-bold flex items-center gap-2"><Users size={24} className="text-accent-1" /> Members</h2>
-          <button className="btn btn-primary" onClick={() => openModal('ADD_MEMBER')}>
-            <Plus size={18} /> Add Member
-          </button>
+          <div className="flex gap-4 flex-wrap">
+            <input
+              type="text"
+              className="input-base min-w-[200px]"
+              placeholder="Search member name..."
+              value={tripSearchTerm}
+              onChange={(e) => setTripSearchTerm(e.target.value)}
+            />
+            <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }} onClick={() => openModal('ADD_MEMBER')}>
+              <Plus size={18} /> Add Member
+            </button>
+          </div>
         </div>
 
         {currentTrip.members.length === 0 ? (
@@ -339,7 +444,7 @@ function App() {
           </div>
         ) : (
           <div className="member-list mb-8">
-            {currentTrip.members.map(member => (
+            {currentTrip.members.filter(m => m.name.toLowerCase().includes(tripSearchTerm.toLowerCase())).map(member => (
               <div key={member.id} className="member-item">
                 <div className="flex items-center justify-between w-full mb-2 border-b border-glass pb-4" style={{ borderColor: 'var(--border-glass)' }}>
                   <h3 className="text-xl font-bold">{member.name}</h3>
@@ -461,14 +566,39 @@ function App() {
           </div>
 
           <div className="mt-2">
-            <label className="input-label mb-2">Select Members</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="input-label" style={{ marginBottom: 0 }}>Select Members</label>
+              <button
+                type="button"
+                className="text-accent-1 text-sm font-medium"
+                style={{ textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+                onClick={(e) => {
+                  const form = e.target.closest('form');
+                  const visibleCheckboxes = form.querySelectorAll('.checkbox-item:not([style*="display: none"]) input[type="checkbox"]');
+                  const allChecked = Array.from(visibleCheckboxes).every(cb => cb.checked);
+                  visibleCheckboxes.forEach(cb => cb.checked = !allChecked);
+                }}
+              >
+                Select / Deselect Visible
+              </button>
+            </div>
+            <input
+              type="text"
+              className="input-base mb-3"
+              placeholder="Search members..."
+              value={modalSearchTerm}
+              onChange={(e) => setModalSearchTerm(e.target.value)}
+            />
             <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto" style={{ paddingRight: '8px' }}>
-              {currentTrip?.members.map(member => (
-                <label key={member.id} className="checkbox-item">
-                  <input type="checkbox" name="members" value={member.id} defaultChecked />
-                  <span className="font-medium">{member.name}</span>
-                </label>
-              ))}
+              {currentTrip?.members.map(member => {
+                const isMatch = member.name.toLowerCase().includes(modalSearchTerm.toLowerCase());
+                return (
+                  <label key={member.id} className="checkbox-item" style={{ display: isMatch ? 'flex' : 'none' }}>
+                    <input type="checkbox" name="members" value={member.id} defaultChecked />
+                    <span className="font-medium">{member.name}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
 
@@ -508,6 +638,18 @@ function App() {
       </main>
 
       {renderModals()}
+
+      {toast && (
+        <div className="toast-container">
+          <div className="toast-content">
+            <span className="font-medium">{toast.message}</span>
+            <button className="btn btn-secondary text-sm px-3 py-1 ml-4" onClick={handleUndo}>
+              Undo
+            </button>
+          </div>
+          <div className="toast-progress-bar" key={toast.id}></div>
+        </div>
+      )}
     </>
   );
 }
