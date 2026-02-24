@@ -2,7 +2,11 @@ import { useState, useMemo, useEffect } from 'react';
 import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List } from 'lucide-react';
 
 function App() {
-  const [trips, setTrips] = useState([]);
+  const [trips, setTrips] = useState(() => {
+  const savedTrips = localStorage.getItem('splitsync_trips');
+  return savedTrips ? JSON.parse(savedTrips) : [];
+});
+
   const [currentTripId, setCurrentTripId] = useState(null);
   const [toast, setToast] = useState(null);
 
