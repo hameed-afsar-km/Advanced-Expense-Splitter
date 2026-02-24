@@ -57,6 +57,12 @@ function App() {
       });
   }, [trips, homeSearchTerm, homeFilterType, homeDateFrom, homeDateTo, homeSortBy]);
 
+// This runs every single time the 'trips' array changes
+useEffect(() => {
+  localStorage.setItem('splitsync_trips', JSON.stringify(trips));
+}, [trips]);
+
+  
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => {
