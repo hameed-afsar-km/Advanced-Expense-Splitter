@@ -139,8 +139,19 @@ function App() {
 
     const prevTrips = [...trips];
     setTrips([...trips, newTrip]);
-    setToast({ message: "Trip created", previousState: prevTrips, id: Date.now() });
+    setToast({ message: "Trip created", id: crypto.randomUUID(), canUndo: true });
+    setHistory(prev => [...prev, { action: "Created Trip", state: prevTrips }]);
     closeModal();
+  };
+
+  const handleDeleteTrip = () => {
+    if (window.confirm('Are you sure you want to delete this entire trip? This action cannot be undone.')) {
+      const prevTrips = [...trips];
+      setHistory(prev => [...prev, { action: "Deleted Trip", state: prevTrips }]);
+      setTrips(prev => prev.filter(t => t.id !== currentTripId));
+      setCurrentTripId(null);
+      setToast({ message: "Trip deleted successfully", id: crypto.randomUUID() });
+    }
   };
 
   // ---- Member Methods ----
@@ -516,12 +527,15 @@ function App() {
           <div className="glass p-6 mb-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Quick Actions</h3>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button className="btn btn-secondary text-sm px-4 py-2" onClick={() => openModal('VIEW_TRIP_LOGS')}>
                   <FileText size={16} /> Logs
                 </button>
-                <button className="btn btn-danger text-sm px-4 py-2" onClick={handleResetStats}>
-                  <RefreshCw size={16} /> Reset Data
+                <button className="btn btn-secondary text-sm px-4 py-2" onClick={handleResetStats}>
+                  <RefreshCw size={16} /> Reset
+                </button>
+                <button className="btn btn-danger text-sm px-4 py-2" onClick={handleDeleteTrip}>
+                  <Trash2 size={16} /> Delete Trip
                 </button>
               </div>
             </div>
@@ -570,25 +584,25 @@ function App() {
           <div className="member-list mb-8">
             {currentTrip.members.filter(m => m.name.toLowerCase().includes(tripSearchTerm.toLowerCase())).map(member => (
               <div key={member.id} className="member-item">
-                <div className="flex items-center justify-between w-full mb-2 border-b border-glass pb-4" style={{ borderColor: 'var(--border-glass)' }}>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-bold">{member.name}</h3>
+                <div className="flex items-center justify-between w-full mb-2 border-b border-glass pb-4 flex-wrap gap-4" style={{ borderColor: 'var(--border-glass)' }}>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <h3 className="text-xl font-bold truncate">{member.name}</h3>
                     <button
-                      className="btn btn-secondary text-sm p-1 ml-2"
+                      className="btn btn-secondary text-sm p-1 flex-shrink-0"
                       onClick={() => openModal('EDIT_MEMBER', { memberId: member.id, name: member.name })}
                       title="Edit Member"
                     >
                       <Edit3 size={14} />
                     </button>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="btn btn-secondary text-sm px-3 py-1 flex items-center gap-1" onClick={() => openModal('VIEW_MEMBER_LOGS', member.id)}>
+                  <div className="flex gap-2 flex-wrap justify-end">
+                    <button className="btn btn-secondary text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => openModal('VIEW_MEMBER_LOGS', member.id)}>
                       <List size={14} /> <span className="hidden md-inline">Details</span>
                     </button>
-                    <button className="btn btn-secondary text-sm px-3 py-1 flex items-center gap-1" onClick={() => handleResetMemberStats(member.id)}>
+                    <button className="btn btn-secondary text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => handleResetMemberStats(member.id)}>
                       <RefreshCw size={14} /> <span className="hidden md-inline">Reset</span>
                     </button>
-                    <button className="btn btn-danger text-sm px-3 py-1 flex items-center gap-1" onClick={() => handleDeleteMember(member.id)}>
+                    <button className="btn btn-danger text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => handleDeleteMember(member.id)}>
                       <Trash2 size={14} /> <span className="hidden md-inline">Remove</span>
                     </button>
                   </div>
