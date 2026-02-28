@@ -145,13 +145,12 @@ function App() {
   };
 
   const handleDeleteTrip = () => {
-    if (window.confirm('Are you sure you want to delete this entire trip? This action cannot be undone.')) {
-      const prevTrips = [...trips];
-      setHistory(prev => [...prev, { action: "Deleted Trip", state: prevTrips }]);
-      setTrips(prev => prev.filter(t => t.id !== currentTripId));
-      setCurrentTripId(null);
-      setToast({ message: "Trip deleted successfully", id: crypto.randomUUID() });
-    }
+    const prevTrips = [...trips];
+    setHistory(prev => [...prev, { action: "Deleted Trip", state: prevTrips }]);
+    setTrips(prev => prev.filter(t => t.id !== currentTripId));
+    setCurrentTripId(null);
+    setToast({ message: "Trip deleted successfully", id: crypto.randomUUID() });
+    closeModal();
   };
 
   // ---- Member Methods ----
@@ -210,6 +209,7 @@ function App() {
       ...trip,
       members: trip.members.filter(m => m.id !== memberId)
     }), "Deleted member");
+    closeModal();
   };
 
   // ---- Transaction Methods ----
@@ -354,44 +354,42 @@ function App() {
   };
 
   const handleResetStats = () => {
-    if (window.confirm('Are you sure you want to reset all data for these members to zero?')) {
-      updateTrip(currentTripId, trip => {
-        const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Reset Data', description: 'Reset all members data to zero.', memberIds: [] };
-        return {
-          ...trip,
-          members: trip.members.map(m => ({
-            ...m,
-            received: 0,
-            expense: 0,
-            toGive: 0,
-            toGet: 0,
-            remaining: 0
-          })),
-          logs: [...(trip.logs || []), newLog]
-        };
-      });
-    }
+    updateTrip(currentTripId, trip => {
+      const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Reset Data', description: 'Reset all members data to zero.', memberIds: [] };
+      return {
+        ...trip,
+        members: trip.members.map(m => ({
+          ...m,
+          received: 0,
+          expense: 0,
+          toGive: 0,
+          toGet: 0,
+          remaining: 0
+        })),
+        logs: [...(trip.logs || []), newLog]
+      };
+    });
+    closeModal();
   };
 
   const handleResetMemberStats = (memberId) => {
-    if (window.confirm('Are you sure you want to reset all data for this member to zero?')) {
-      updateTrip(currentTripId, trip => {
-        const member = trip.members.find(m => m.id === memberId);
-        const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Reset Member', description: `Reset data for ${member?.name} to zero.`, memberIds: [memberId] };
-        return {
-          ...trip,
-          members: trip.members.map(m => m.id === memberId ? {
-            ...m,
-            received: 0,
-            expense: 0,
-            toGive: 0,
-            toGet: 0,
-            remaining: 0
-          } : m),
-          logs: [...(trip.logs || []), newLog]
-        };
-      });
-    }
+    updateTrip(currentTripId, trip => {
+      const member = trip.members.find(m => m.id === memberId);
+      const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Reset Member', description: `Reset data for ${member?.name} to zero.`, memberIds: [memberId] };
+      return {
+        ...trip,
+        members: trip.members.map(m => m.id === memberId ? {
+          ...m,
+          received: 0,
+          expense: 0,
+          toGive: 0,
+          toGet: 0,
+          remaining: 0
+        } : m),
+        logs: [...(trip.logs || []), newLog]
+      };
+    });
+    closeModal();
   };
 
   // ---- Renders ----
@@ -531,10 +529,10 @@ function App() {
                 <button className="btn btn-secondary text-sm px-4 py-2" onClick={() => openModal('VIEW_TRIP_LOGS')}>
                   <FileText size={16} /> Logs
                 </button>
-                <button className="btn btn-secondary text-sm px-4 py-2" onClick={handleResetStats}>
+                <button className="btn btn-secondary text-sm px-4 py-2" onClick={() => openModal('CONFIRM_RESET_STATS')}>
                   <RefreshCw size={16} /> Reset
                 </button>
-                <button className="btn btn-danger text-sm px-4 py-2" onClick={handleDeleteTrip}>
+                <button className="btn btn-danger text-sm px-4 py-2" onClick={() => openModal('CONFIRM_DELETE_TRIP')}>
                   <Trash2 size={16} /> Delete Trip
                 </button>
               </div>
@@ -599,10 +597,10 @@ function App() {
                     <button className="btn btn-secondary text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => openModal('VIEW_MEMBER_LOGS', member.id)}>
                       <List size={14} /> <span className="hidden md-inline">Details</span>
                     </button>
-                    <button className="btn btn-secondary text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => handleResetMemberStats(member.id)}>
+                    <button className="btn btn-secondary text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => openModal('CONFIRM_RESET_MEMBER', member.id)}>
                       <RefreshCw size={14} /> <span className="hidden md-inline">Reset</span>
                     </button>
-                    <button className="btn btn-danger text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => handleDeleteMember(member.id)}>
+                    <button className="btn btn-danger text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => openModal('CONFIRM_DELETE_MEMBER', member.id)}>
                       <Trash2 size={14} /> <span className="hidden md-inline">Remove</span>
                     </button>
                   </div>
@@ -878,6 +876,58 @@ function App() {
             <button type="submit" className="btn btn-primary">Save Changes</button>
           </div>
         </form>
+      );
+    }
+    else if (modalState.type === 'CONFIRM_DELETE_TRIP') {
+      title = 'Delete Trip';
+      content = (
+        <div className="flex flex-col gap-4">
+          <p className="text-muted">Are you sure you want to delete this entire trip? This action cannot be undone.</p>
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+            <button type="button" className="btn btn-danger" onClick={handleDeleteTrip}>Delete Permanently</button>
+          </div>
+        </div>
+      );
+    }
+    else if (modalState.type === 'CONFIRM_RESET_STATS') {
+      title = 'Reset Trip Data';
+      content = (
+        <div className="flex flex-col gap-4">
+          <p className="text-muted">Are you sure you want to reset all data for all members in this trip to zero?</p>
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+            <button type="button" className="btn btn-danger" onClick={handleResetStats}>Reset Data</button>
+          </div>
+        </div>
+      );
+    }
+    else if (modalState.type === 'CONFIRM_RESET_MEMBER') {
+      const memberId = modalState.data;
+      const member = currentTrip?.members.find(m => m.id === memberId);
+      title = 'Reset Member Stats';
+      content = (
+        <div className="flex flex-col gap-4">
+          <p className="text-muted">Are you sure you want to reset all data for member <strong>{member?.name}</strong> to zero?</p>
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+            <button type="button" className="btn btn-danger" onClick={() => handleResetMemberStats(memberId)}>Reset Data</button>
+          </div>
+        </div>
+      );
+    }
+    else if (modalState.type === 'CONFIRM_DELETE_MEMBER') {
+      const memberId = modalState.data;
+      const member = currentTrip?.members.find(m => m.id === memberId);
+      title = 'Remove Member';
+      content = (
+        <div className="flex flex-col gap-4">
+          <p className="text-muted">Are you sure you want to remove <strong>{member?.name}</strong> from this trip? Their expenses and history will be lost.</p>
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+            <button type="button" className="btn btn-danger" onClick={() => handleDeleteMember(memberId)}>Remove Member</button>
+          </div>
+        </div>
       );
     }
     else if (modalState.type === 'SETTINGS') {
