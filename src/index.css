@@ -610,3 +610,14 @@ body {
     width: 0%;
   }
 }
+
+/* Responsive Utilities */
+.hidden {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .md-inline {
+    display: inline !important;
+  }
+}

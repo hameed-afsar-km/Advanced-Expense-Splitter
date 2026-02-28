@@ -583,13 +583,13 @@ function App() {
                   </div>
                   <div className="flex gap-2">
                     <button className="btn btn-secondary text-sm px-3 py-1 flex items-center gap-1" onClick={() => openModal('VIEW_MEMBER_LOGS', member.id)}>
-                      <List size={14} /> <span className="hidden md:inline">Details</span>
+                      <List size={14} /> <span className="hidden md-inline">Details</span>
                     </button>
                     <button className="btn btn-secondary text-sm px-3 py-1 flex items-center gap-1" onClick={() => handleResetMemberStats(member.id)}>
-                      <RefreshCw size={14} /> <span className="hidden md:inline">Reset</span>
+                      <RefreshCw size={14} /> <span className="hidden md-inline">Reset</span>
                     </button>
                     <button className="btn btn-danger text-sm px-3 py-1 flex items-center gap-1" onClick={() => handleDeleteMember(member.id)}>
-                      <Trash2 size={14} /> <span className="hidden md:inline">Remove</span>
+                      <Trash2 size={14} /> <span className="hidden md-inline">Remove</span>
                     </button>
                   </div>
                 </div>
