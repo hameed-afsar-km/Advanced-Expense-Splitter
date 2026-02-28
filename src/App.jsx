@@ -1,14 +1,23 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List, Settings, Edit3, Undo2 } from 'lucide-react';
+import { useSettingsStore } from './store';
 
 function App() {
   const [trips, setTrips] = useState(() => {
-  const savedTrips = localStorage.getItem('splitsync_trips');
-  return savedTrips ? JSON.parse(savedTrips) : [];
-});
+    const savedTrips = localStorage.getItem('splitsync_trips');
+    return savedTrips ? JSON.parse(savedTrips) : [];
+  });
 
   const [currentTripId, setCurrentTripId] = useState(null);
   const [toast, setToast] = useState(null);
+  const [history, setHistory] = useState([]);
+
+  const { currency, setCurrency, themePrimary, setThemePrimary, themeSecondary, setThemeSecondary } = useSettingsStore();
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent-1', themePrimary);
+    document.documentElement.style.setProperty('--accent-2', themeSecondary);
+  }, [themePrimary, themeSecondary]);
 
   // Home query state
   const [homeSearchTerm, setHomeSearchTerm] = useState('');
@@ -32,8 +41,8 @@ function App() {
     return trips
       .filter(trip => {
         const searchRaw = homeSearchTerm.toLowerCase();
-        const matchSearch = trip.tripName.toLowerCase().includes(searchRaw) ||
-          trip.startDate.includes(searchRaw) ||
+        const matchSearch = (trip.tripName && trip.tripName.toLowerCase().includes(searchRaw)) ||
+          (trip.startDate && trip.startDate.includes(searchRaw)) ||
           (trip.endDate && trip.endDate.includes(searchRaw));
         if (!matchSearch) return false;
 
@@ -57,12 +66,12 @@ function App() {
       });
   }, [trips, homeSearchTerm, homeFilterType, homeDateFrom, homeDateTo, homeSortBy]);
 
-// This runs every single time the 'trips' array changes
-useEffect(() => {
-  localStorage.setItem('splitsync_trips', JSON.stringify(trips));
-}, [trips]);
+  // This runs every single time the 'trips' array changes
+  useEffect(() => {
+    localStorage.setItem('splitsync_trips', JSON.stringify(trips));
+  }, [trips]);
 
-  
+
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => {
@@ -73,16 +82,21 @@ useEffect(() => {
   }, [toast]);
 
   const handleUndo = () => {
-    if (toast && toast.previousState) {
-      setTrips(toast.previousState);
-      setToast(null);
+    if (history.length > 0) {
+      const prev = history[history.length - 1];
+      setTrips(prev.state);
+      setHistory(history.slice(0, -1));
+      setToast({ message: `Undid: ${prev.action}`, id: crypto.randomUUID() });
+    } else {
+      setToast({ message: "Nothing to undo", id: crypto.randomUUID() });
     }
   };
 
   const updateTrip = (tripId, updater, undoMessage = "Action successful") => {
     const prevTrips = [...trips];
+    setHistory(prev => [...prev, { action: undoMessage, state: prevTrips }]);
     setTrips(prevTrips.map(t => (t.id === tripId ? updater(t) : t)));
-    setToast({ message: undoMessage, previousState: prevTrips, id: Date.now() });
+    setToast({ message: undoMessage, id: crypto.randomUUID(), canUndo: true });
   };
 
   const openModal = (type, data = null) => {
@@ -153,11 +167,38 @@ useEffect(() => {
     closeModal();
   };
 
+  const handleEditMember = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const newName = formData.get('name');
+    const memberId = modalState.data.memberId;
+
+    updateTrip(currentTripId, trip => ({
+      ...trip,
+      members: trip.members.map(m => m.id === memberId ? { ...m, name: newName } : m)
+    }), "Edited member name");
+
+    closeModal();
+  };
+
+  const handleEditTrip = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const tripName = formData.get('tripName');
+
+    updateTrip(currentTripId, trip => ({
+      ...trip,
+      tripName
+    }), "Edited trip name");
+
+    closeModal();
+  };
+
   const handleDeleteMember = (memberId) => {
     updateTrip(currentTripId, trip => ({
       ...trip,
       members: trip.members.filter(m => m.id !== memberId)
-    }));
+    }), "Deleted member");
   };
 
   // ---- Transaction Methods ----
@@ -404,7 +445,10 @@ useEffect(() => {
                 <div className="text-muted flex items-center gap-2 mb-4 text-sm">
                   <Calendar size={16} />
                   <span>
-                    {trip.isSingleDay ? new Date(trip.startDate).toLocaleDateString() : `${new Date(trip.startDate).toLocaleDateString()} - ${new Date(trip.endDate).toLocaleDateString()}`}
+                    {trip.isSingleDay
+                      ? (trip.startDate ? new Date(trip.startDate).toLocaleDateString() : 'N/A')
+                      : `${trip.startDate ? new Date(trip.startDate).toLocaleDateString() : 'N/A'} - ${trip.endDate ? new Date(trip.endDate).toLocaleDateString() : 'N/A'}`
+                    }
                   </span>
                 </div>
                 <div className="flex justify-between items-center mt-6 border-t border-glass pt-4" style={{ borderColor: 'var(--border-glass)' }}>
@@ -412,7 +456,7 @@ useEffect(() => {
                     <Users size={16} /> {trip.members.length} members
                   </div>
                   <div className="font-bold text-lg">
-                    ${totalSpent.toFixed(2)}
+                    {currency}{totalSpent.toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -438,7 +482,15 @@ useEffect(() => {
         <div className="glass-card mb-8">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div>
-              <h1 className="text-3xl font-bold gradient-text">{currentTrip.tripName}</h1>
+              <div className="flex items-center gap-4 flex-wrap">
+                <h1 className="text-3xl font-bold gradient-text">{currentTrip.tripName}</h1>
+                <button
+                  className="btn btn-secondary text-sm px-2 py-1"
+                  onClick={() => openModal('EDIT_TRIP', { tripName: currentTrip.tripName })}
+                >
+                  <Edit3 size={14} />
+                </button>
+              </div>
               <div className="text-muted flex items-center gap-2 mt-2">
                 <Calendar size={16} />
                 {currentTrip.isSingleDay
@@ -450,11 +502,11 @@ useEffect(() => {
             <div className="flex gap-4">
               <div className="text-right">
                 <div className="stat-label">Total Spent</div>
-                <div className="text-2xl font-bold text-danger">${totalSpent.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-danger">{currency}{totalSpent.toFixed(2)}</div>
               </div>
               <div className="text-right">
                 <div className="stat-label">Total Pool (Received)</div>
-                <div className="text-2xl font-bold text-success">${totalReceived.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-success">{currency}{totalReceived.toFixed(2)}</div>
               </div>
             </div>
           </div>
@@ -491,7 +543,10 @@ useEffect(() => {
         )}
 
         <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-          <h2 className="text-2xl font-bold flex items-center gap-2"><Users size={24} className="text-accent-1" /> Members</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Users size={24} className="text-accent-1" />
+            Members <span className="text-muted text-lg">({currentTrip.members.length})</span>
+          </h2>
           <div className="flex gap-4 flex-wrap">
             <input
               type="text"
@@ -516,44 +571,53 @@ useEffect(() => {
             {currentTrip.members.filter(m => m.name.toLowerCase().includes(tripSearchTerm.toLowerCase())).map(member => (
               <div key={member.id} className="member-item">
                 <div className="flex items-center justify-between w-full mb-2 border-b border-glass pb-4" style={{ borderColor: 'var(--border-glass)' }}>
-                  <h3 className="text-xl font-bold">{member.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-bold">{member.name}</h3>
+                    <button
+                      className="btn btn-secondary text-sm p-1 ml-2"
+                      onClick={() => openModal('EDIT_MEMBER', { memberId: member.id, name: member.name })}
+                      title="Edit Member"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                  </div>
                   <div className="flex gap-2">
-                    <button className="btn btn-secondary text-sm px-3 py-1" onClick={() => openModal('VIEW_MEMBER_LOGS', member.id)}>
-                      <List size={14} /> Details
+                    <button className="btn btn-secondary text-sm px-3 py-1 flex items-center gap-1" onClick={() => openModal('VIEW_MEMBER_LOGS', member.id)}>
+                      <List size={14} /> <span className="hidden md:inline">Details</span>
                     </button>
-                    <button className="btn btn-secondary text-sm px-3 py-1" onClick={() => handleResetMemberStats(member.id)}>
-                      <RefreshCw size={14} /> Reset
+                    <button className="btn btn-secondary text-sm px-3 py-1 flex items-center gap-1" onClick={() => handleResetMemberStats(member.id)}>
+                      <RefreshCw size={14} /> <span className="hidden md:inline">Reset</span>
                     </button>
-                    <button className="btn btn-danger text-sm px-3 py-1" onClick={() => handleDeleteMember(member.id)}>
-                      <Trash2 size={14} /> Remove
+                    <button className="btn btn-danger text-sm px-3 py-1 flex items-center gap-1" onClick={() => handleDeleteMember(member.id)}>
+                      <Trash2 size={14} /> <span className="hidden md:inline">Remove</span>
                     </button>
                   </div>
                 </div>
                 <div className="flex flex-row md:flex-row flex-wrap gap-4 w-full">
                   <div className="stat-box">
                     <div className="stat-label">Received</div>
-                    <div className="stat-value text-success">${member.received.toFixed(2)}</div>
+                    <div className="stat-value text-success">{currency}{member.received.toFixed(2)}</div>
                   </div>
                   <div className="stat-box">
                     <div className="stat-label">Expense</div>
-                    <div className="stat-value text-danger">${member.expense.toFixed(2)}</div>
+                    <div className="stat-value text-danger">{currency}{member.expense.toFixed(2)}</div>
                   </div>
                   <div className="stat-box">
                     <div className="stat-label">To Give</div>
                     <div className="stat-value" style={{ color: member.toGive > 0 ? 'var(--warning)' : 'inherit' }}>
-                      ${member.toGive.toFixed(2)}
+                      {currency}{member.toGive.toFixed(2)}
                     </div>
                   </div>
                   <div className="stat-box">
                     <div className="stat-label">To Get</div>
                     <div className="stat-value" style={{ color: member.toGet > 0 ? 'var(--accent-1)' : 'inherit' }}>
-                      ${member.toGet.toFixed(2)}
+                      {currency}{member.toGet.toFixed(2)}
                     </div>
                   </div>
                   <div className="stat-box">
                     <div className="stat-label">Remaining</div>
                     <div className="stat-value" style={{ color: member.remaining < 0 ? 'var(--danger)' : 'inherit' }}>
-                      ${member.remaining.toFixed(2)}
+                      {currency}{Math.abs(member.remaining).toFixed(2)}{member.remaining < 0 ? ' (due)' : ''}
                     </div>
                   </div>
                 </div>
@@ -626,6 +690,13 @@ useEffect(() => {
       const config = typeConfig[modalState.type];
       title = config.title;
 
+      const updateSelectedCount = (form) => {
+        if (!form) return;
+        const checked = form.querySelectorAll('input[name="members"]:checked').length;
+        const display = form.querySelector('#selectedCountDisplay');
+        if (display) display.textContent = `(${checked} Selected)`;
+      };
+
       content = (
         <form onSubmit={config.onSubmit} className="flex flex-col gap-4">
           {config.hasName && (
@@ -641,7 +712,10 @@ useEffect(() => {
 
           <div className="mt-2">
             <div className="flex justify-between items-center mb-2">
-              <label className="input-label" style={{ marginBottom: 0 }}>Select Members</label>
+              <label className="input-label" style={{ marginBottom: 0 }}>
+                Select Members
+                <span id="selectedCountDisplay" className="text-accent-1 font-bold ml-2">({currentTrip?.members.length} Selected)</span>
+              </label>
               <button
                 type="button"
                 className="text-accent-1 text-sm font-medium select-button"
@@ -651,6 +725,7 @@ useEffect(() => {
                   const visibleCheckboxes = form.querySelectorAll('.checkbox-item:not([style*="display: none"]) input[type="checkbox"]');
                   const allChecked = Array.from(visibleCheckboxes).every(cb => cb.checked);
                   visibleCheckboxes.forEach(cb => cb.checked = !allChecked);
+                  updateSelectedCount(form);
                 }}
               >
                 Select / Deselect Visible
@@ -668,7 +743,7 @@ useEffect(() => {
                 const isMatch = member.name.toLowerCase().includes(modalSearchTerm.toLowerCase());
                 return (
                   <label key={member.id} className="checkbox-item" style={{ display: isMatch ? 'flex' : 'none' }}>
-                    <input type="checkbox" name="members" value={member.id} defaultChecked />
+                    <input type="checkbox" name="members" value={member.id} defaultChecked onChange={(e) => updateSelectedCount(e.target.closest('form'))} />
                     <span className="font-medium">{member.name}</span>
                   </label>
                 );
@@ -761,6 +836,95 @@ useEffect(() => {
         </div>
       );
     }
+    else if (modalState.type === 'EDIT_MEMBER') {
+      title = 'Edit Member';
+      content = (
+        <form onSubmit={handleEditMember} className="flex flex-col gap-4">
+          <div>
+            <label className="input-label">Member Name</label>
+            <input type="text" name="name" required className="input-base" defaultValue={modalState.data?.name} />
+          </div>
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      );
+    }
+    else if (modalState.type === 'EDIT_TRIP') {
+      title = 'Edit Trip Name';
+      content = (
+        <form onSubmit={handleEditTrip} className="flex flex-col gap-4">
+          <div>
+            <label className="input-label">Trip/Day Name</label>
+            <input type="text" name="tripName" required className="input-base" defaultValue={modalState.data?.tripName} />
+          </div>
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      );
+    }
+    else if (modalState.type === 'SETTINGS') {
+      title = 'Settings';
+      const commonCurrencies = ['$', '€', '£', '₹', '¥', 'A$', 'C$', '₣', 'Rp', '₩'];
+      content = (
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="input-label mb-2">Currency Symbol</label>
+            <div className="flex flex-wrap gap-2">
+              {commonCurrencies.map(c => (
+                <button
+                  key={c}
+                  className={`btn ${currency === c ? 'btn-primary' : 'btn-secondary'} px-3 py-1`}
+                  onClick={() => setCurrency(c)}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3">
+              <input
+                type="text"
+                className="input-base"
+                placeholder="Custom Currency Symbol..."
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                maxLength={5}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="input-label">Primary Theme Color</label>
+            <div className="flex items-center gap-4 bg-black/20 p-2 rounded-xl border border-[var(--border-glass)]">
+              <input
+                type="color"
+                className="w-12 h-12 bg-transparent rounded cursor-pointer border-none p-0 outline-none"
+                value={themePrimary}
+                onChange={(e) => setThemePrimary(e.target.value)}
+              />
+              <span className="text-muted font-mono uppercase">{themePrimary}</span>
+            </div>
+          </div>
+          <div>
+            <label className="input-label">Secondary Theme Color</label>
+            <div className="flex items-center gap-4 bg-black/20 p-2 rounded-xl border border-[var(--border-glass)]">
+              <input
+                type="color"
+                className="w-12 h-12 bg-transparent rounded cursor-pointer border-none p-0 outline-none"
+                value={themeSecondary}
+                onChange={(e) => setThemeSecondary(e.target.value)}
+              />
+              <span className="text-muted font-mono uppercase">{themeSecondary}</span>
+            </div>
+          </div>
+          <div className="flex justify-end mt-4">
+            <button type="button" className="btn btn-secondary w-full sm:w-auto" onClick={closeModal}>Done</button>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
@@ -777,11 +941,19 @@ useEffect(() => {
       <div className="blob blob-1"></div>
       <div className="blob blob-2"></div>
 
-      <header className="border-b border-glass mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(10px)' }}>
+      <header className="border-b border-glass mb-4 sticky top-0 z-50" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(16px)' }}>
         <div className="container py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold cursor-pointer" onClick={() => setCurrentTripId(null)}>
+          <h1 className="text-2xl font-bold cursor-pointer transition-transform hover:scale-105" onClick={() => setCurrentTripId(null)}>
             Split<span className="text-accent-1">Sync</span>
           </h1>
+          <div className="flex items-center gap-2">
+            <button className="btn btn-secondary text-sm px-3 py-2 border-none" onClick={handleUndo} title="Undo last action">
+              <Undo2 size={18} />
+            </button>
+            <button className="btn btn-secondary text-sm px-3 py-2 border-none" onClick={() => openModal('SETTINGS')} title="Settings">
+              <Settings size={18} />
+            </button>
+          </div>
         </div>
       </header>
 

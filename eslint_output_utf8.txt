@@ -1,0 +1,20 @@
+﻿
+> expense-splitter@0.0.0 lint
+> eslint .
+
+
+D:\SaaS\Advanced-Expense-Splitter\src\App.jsx
+  99:42  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+   97 |     setHistory(prev => [...prev, { action: undoMessage, state: prevTrips }]);
+   98 |     setTrips(prevTrips.map(t => (t.id === tripId ? updater(t) : t)));
+>  99 |     setToast({ message: undoMessage, id: Date.now(), canUndo: true });
+      |                                          ^^^^^^^^^^ Cannot call impure function
+  100 |   };
+  101 |
+  102 |   const openModal = (type, data = null) => {  react-hooks/purity
+
+Γ£û 1 problem (1 error, 0 warnings)
+

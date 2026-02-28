@@ -305,6 +305,18 @@ body {
   justify-content: center;
 }
 
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
 .gap-2 {
   gap: 0.5rem;
 }
@@ -410,6 +422,10 @@ body {
 .stat-box {
   flex: 1;
   min-width: 120px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 1rem;
 }
 
 .stat-label {
@@ -519,6 +535,14 @@ body {
 
 .trip-card-content {
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.trip-card-content>div:first-child {
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .badge {
