@@ -403,33 +403,33 @@ function App() {
         </button>
       </div>
 
-      <div className="glass p-4 mt-8 mb-8 flex flex-wrap gap-4 items-end">
-        <div className="flex-1 min-w-[200px]">
+      <div className="home-filter-bar glass mt-8 mb-8">
+        <div className="filter-item search">
           <label className="input-label">Search Trips/Date</label>
           <input type="text" className="input-base" placeholder="Name or Date..." value={homeSearchTerm} onChange={e => setHomeSearchTerm(e.target.value)} />
         </div>
-        <div>
+        <div className="filter-item type">
           <label className="input-label">Type</label>
-          <select className="input-base" value={homeFilterType} onChange={e => setHomeFilterType(e.target.value)} style={{ width: '130px' }}>
+          <select className="input-base" value={homeFilterType} onChange={e => setHomeFilterType(e.target.value)}>
             <option value="all" style={{ background: '#13131a' }}>All Types</option>
             <option value="single" style={{ background: '#13131a' }}>Single Day</option>
             <option value="multi" style={{ background: '#13131a' }}>Multi Day</option>
           </select>
         </div>
-        <div>
+        <div className="filter-item sort">
           <label className="input-label">Sort</label>
-          <select className="input-base" value={homeSortBy} onChange={e => setHomeSortBy(e.target.value)} style={{ width: '150px' }}>
+          <select className="input-base" value={homeSortBy} onChange={e => setHomeSortBy(e.target.value)}>
             <option value="date-desc" style={{ background: '#13131a' }}>Newest First</option>
             <option value="date-asc" style={{ background: '#13131a' }}>Oldest First</option>
             <option value="name-asc" style={{ background: '#13131a' }}>Name (A-Z)</option>
             <option value="name-desc" style={{ background: '#13131a' }}>Name (Z-A)</option>
           </select>
         </div>
-        <div>
+        <div className="filter-item date-from">
           <label className="input-label">From Date</label>
           <input type="date" className="input-base" value={homeDateFrom} onChange={e => setHomeDateFrom(e.target.value)} />
         </div>
-        <div>
+        <div className="filter-item date-to">
           <label className="input-label">To Date</label>
           <input type="date" className="input-base" value={homeDateTo} onChange={e => setHomeDateTo(e.target.value)} />
         </div>
@@ -522,7 +522,7 @@ function App() {
         </div>
 
         {currentTrip.members.length > 0 && (
-          <div className="glass p-6 mb-8">
+          <div className="glass mb-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Quick Actions</h3>
               <div className="flex gap-2 flex-wrap">
@@ -559,16 +559,16 @@ function App() {
             <Users size={24} className="text-accent-1" />
             Members <span className="text-muted text-lg">({currentTrip.members.length})</span>
           </h2>
-          <div className="flex gap-4 flex-wrap">
+          <div className="member-search-container">
             <input
               type="text"
-              className="input-base min-w-[200px]"
+              className="input-base member-search-input"
               placeholder="Search member name..."
               value={tripSearchTerm}
               onChange={(e) => setTripSearchTerm(e.target.value)}
             />
-            <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }} onClick={() => openModal('ADD_MEMBER')}>
-              <Plus size={18} /> Add Member
+            <button className="btn btn-primary add-member-btn" onClick={() => openModal('ADD_MEMBER')}>
+              <Plus size={18} /> <span className="btn-text">Add Member</span>
             </button>
           </div>
         </div>

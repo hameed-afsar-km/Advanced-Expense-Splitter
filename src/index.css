@@ -47,14 +47,15 @@ body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-glass);
-  border-radius: 16px;
+  border-radius: 20px;
+  padding: 1.5rem;
 }
 
 .glass-card {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
-  border-radius: 20px;
-  padding: 24px;
+  border-radius: 24px;
+  padding: 1.75rem;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -90,7 +91,7 @@ body {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.25rem;
 }
 
 .select-button {
@@ -99,7 +100,7 @@ body {
 
 @media (min-width: 768px) {
   .container {
-    padding: 2rem;
+    padding: 2.5rem;
   }
 }
 
@@ -244,10 +245,10 @@ body {
 .modal-content {
   background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
-  border-radius: 20px;
+  border-radius: 24px;
   width: 100%;
   max-width: 500px;
-  padding: 1.5rem;
+  padding: 1.75rem;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.3s ease forwards;
   max-height: 90vh;
@@ -406,6 +407,77 @@ body {
 
 .text-muted {
   color: var(--text-muted);
+}
+
+/* Home Filter Bar */
+.home-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.filter-item {
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-item.search {
+  flex: 2;
+  min-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .home-filter-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: flex-end;
+  }
+
+  .filter-item.search {
+    grid-column: span 2;
+  }
+
+  .filter-item.type,
+  .filter-item.sort,
+  .filter-item.date-from,
+  .filter-item.date-to {
+    grid-column: span 1;
+  }
+}
+
+/* Member Section Layout */
+.member-search-container {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  align-items: center;
+}
+
+.member-search-input {
+  flex: 1;
+}
+
+@media (max-width: 640px) {
+  .member-search-container {
+    max-width: 100%;
+  }
+
+  .member-search-container .btn-text {
+    display: none;
+  }
+
+  .member-search-container .btn {
+    padding: 0.75rem;
+  }
+}
+
+@media (min-width: 641px) {
+  .member-search-container {
+    width: auto;
+    min-width: 400px;
+  }
 }
 
 /* Table/List styling */
