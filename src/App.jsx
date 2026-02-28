@@ -1038,6 +1038,14 @@ function App() {
           <div className="toast-progress-bar" key={toast.id}></div>
         </div>
       )}
+      <footer className="border-t border-glass mt-12 py-8 text-center text-muted">
+        <div className="container">
+          <div className="mb-8 max-w-[728px] mx-auto min-h-[90px] glass flex items-center justify-center text-xs opacity-50" style={{ borderStyle: 'dashed' }}>
+            Advertisement Placeholder (AdSense)
+          </div>
+          <p className="text-sm">© {new Date().getFullYear()} SplitSync. Built with ❤️ for your group trips.</p>
+        </div>
+      </footer>
     </>
   );
 }
