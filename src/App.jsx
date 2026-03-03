@@ -1252,8 +1252,9 @@ function App() {
     return (
       <div className="splash-screen">
         <div className="splash-ornaments">
-          <div className="blob blob-1"></div>
-          <div className="blob blob-2"></div>
+          <div className="aurora-wave aw-1"></div>
+          <div className="aurora-wave aw-2"></div>
+          <div className="star-field"></div>
         </div>
         <div className="splash-content">
           <div className="kinetic-logo-container">
@@ -1278,9 +1279,11 @@ function App() {
   return (
     <>
       <div className="background-ornaments">
-        <div className="blob blob-1"></div>
-        <div className="blob blob-2"></div>
-        <div className="grid-overlay"></div>
+        <div className="aurora-wave aw-1"></div>
+        <div className="aurora-wave aw-2"></div>
+        <div className="aurora-wave aw-3"></div>
+        <div className="star-field"></div>
+        <div className="cosmic-dust"></div>
       </div>
 
       <header className="site-header">
