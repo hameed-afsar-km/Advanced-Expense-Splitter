@@ -1251,16 +1251,25 @@ function App() {
   if (showSplash) {
     return (
       <div className="splash-screen">
+        <div className="splash-ornaments">
+          <div className="blob blob-1"></div>
+          <div className="blob blob-2"></div>
+        </div>
         <div className="splash-content">
-          <div className="splash-logo">
-            <span className="split">Split</span><span className="sync">Sync</span>
+          <div className="kinetic-logo-container">
+            <div className="kinetic-ring"></div>
+            <div className="kinetic-ring"></div>
+            <div className="kinetic-orb"></div>
+            <div className="logo splash-logo-text">
+              Split<span className="accent gradient-text">Sync</span>
+            </div>
           </div>
-          <div className="splash-loader">
-            <div className="loader-ring"></div>
-            <div className="loader-ring"></div>
-            <div className="loader-ring"></div>
+          <div className="splash-footer">
+            <div className="splash-tagline">Optimizing Group Travel</div>
+            <div className="splash-progress-track">
+              <div className="splash-progress-bar"></div>
+            </div>
           </div>
-          <div className="splash-tagline">Managing memories, not just expenses.</div>
         </div>
       </div>
     );
