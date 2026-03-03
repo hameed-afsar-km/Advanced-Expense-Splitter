@@ -1185,13 +1185,12 @@ function App() {
             <label className="input-label mb-2">Currency Denomination</label>
             <div className="select-wrapper">
               <select
-                className="input-base cursor-pointer appearance-none"
+                className="input-base cursor-pointer"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-glass)' }}
               >
                 {commonCurrencies.map(c => (
-                  <option key={c.value} value={c.value} style={{ background: '#13131a' }}>{c.label}</option>
+                  <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
               </select>
             </div>
@@ -1284,7 +1283,7 @@ function App() {
       <header className="site-header">
         <div className="container header-inner">
           <h1 className="logo" onClick={() => setCurrentTripId(null)}>
-            Split<span className="accent">Sync</span>
+            Split<span className="accent gradient-text">Sync</span>
           </h1>
           <div className="header-actions">
             <button className="nav-icon-btn" onClick={handleUndo} title="Undo last action">
@@ -1314,12 +1313,32 @@ function App() {
           <div className="toast-progress-bar"></div>
         </div>
       )}
-      <footer className="border-t border-glass mt-12 py-8 text-center text-muted">
-        <div className="container">
-          <div className="mb-8 max-w-[728px] mx-auto min-h-[90px] glass flex items-center justify-center text-xs opacity-50" style={{ borderStyle: 'dashed' }}>
-            Advertisement Placeholder (AdSense)
+      <footer className="site-footer">
+        <div className="container footer-content">
+          <div className="footer-top">
+            <div className="footer-brand">
+              <h2 className="logo sm">Split<span className="accent gradient-text">Sync</span></h2>
+              <p className="footer-motto">Effortless splitting for modern groups.</p>
+            </div>
+            <div className="footer-ad-section">
+              <div className="ad-box-wrapper">
+                <ins className="adsbygoogle"
+                  style={{ display: 'block' }}
+                  data-ad-client="ca-pub-7299036615171019"
+                  data-ad-slot="YOUR_AD_SLOT_ID"
+                  data-ad-format="auto"
+                  data-full-width-responsive="true"></ins>
+                <div className="ad-fallback text-xs text-muted">A D V E R T I S E M E N T</div>
+              </div>
+            </div>
           </div>
-          <p className="text-sm">© {new Date().getFullYear()} SplitSync. Built with ❤️ for your group trips.</p>
+          <div className="footer-bottom">
+            <div className="footer-credits">
+              <p>© {new Date().getFullYear()} SplitSync</p>
+              <span className="separator">•</span>
+              <p>Designed with ❤️ for travelers</p>
+            </div>
+          </div>
         </div>
       </footer>
     </>
