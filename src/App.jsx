@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List, Settings, Edit3, Undo2 } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List, Settings, Edit3, Undo2, Download, Upload, Trash } from 'lucide-react';
 import { useSettingsStore } from './store';
+import * as XLSX from 'xlsx';
 
 function App() {
   const [trips, setTrips] = useState(() => {
@@ -152,6 +153,168 @@ function App() {
     setToast({ message: "Trip deleted successfully", id: crypto.randomUUID() });
     closeModal();
   };
+
+  const handleIndividualDelete = (e, tripId) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this trip?")) {
+      const prevTrips = [...trips];
+      setHistory(prev => [...prev, { action: "Deleted Individual Trip", state: prevTrips }]);
+      setTrips(prev => prev.filter(t => t.id !== tripId));
+      setToast({ message: "Trip deleted", id: crypto.randomUUID(), canUndo: true });
+    }
+  };
+
+  const handleClearAllTrips = () => {
+    if (window.confirm("Are you sure you want to delete ALL trips? This cannot be undone unless you have a backup.")) {
+      const prevTrips = [...trips];
+      setHistory(prev => [...prev, { action: "Cleared all trips", state: prevTrips }]);
+      setTrips([]);
+      setToast({ message: "All trips cleared", id: crypto.randomUUID(), canUndo: true });
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (trips.length === 0) {
+      setToast({ message: "No data to export", id: crypto.randomUUID() });
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Trips
+    const tripsData = trips.map(t => ({
+      ID: t.id,
+      'Trip Name': t.tripName,
+      'Single Day': t.isSingleDay ? 'Yes' : 'No',
+      'Start Date': t.startDate,
+      'End Date': t.endDate,
+      'Days Count': t.numberOfDays,
+      'Created At': t.createdAt
+    }));
+    const tripsSheet = XLSX.utils.json_to_sheet(tripsData);
+    XLSX.utils.book_append_sheet(wb, tripsSheet, "Trips Summary");
+
+    // Sheet 2: Members
+    const membersData = [];
+    trips.forEach(t => {
+      t.members.forEach(m => {
+        membersData.push({
+          'Trip ID': t.id,
+          'Trip Name': t.tripName,
+          'Member ID': m.id,
+          'Member Name': m.name,
+          'Received Amount': m.received,
+          'Expense Amount': m.expense,
+          'To Give': m.toGive,
+          'To Get': m.toGet,
+          'Remaining Balance': m.remaining
+        });
+      });
+    });
+    const membersSheet = XLSX.utils.json_to_sheet(membersData);
+    XLSX.utils.book_append_sheet(wb, membersSheet, "Members Detail");
+
+    // Sheet 3: Logs
+    const logsData = [];
+    trips.forEach(t => {
+      (t.logs || []).forEach(l => {
+        logsData.push({
+          'Trip ID': t.id,
+          'Trip Name': t.tripName,
+          'Log ID': l.id,
+          'Log Date': l.date,
+          'Action Type': l.action,
+          'Description': l.description,
+          'Total Amount': l.amount,
+          'Split Per Person': l.splitAmount || 0,
+          'Member IDs Involved': (l.memberIds || []).join(', ')
+        });
+      });
+    });
+    const logsSheet = XLSX.utils.json_to_sheet(logsData);
+    XLSX.utils.book_append_sheet(wb, logsSheet, "Transaction Logs");
+
+    // Save File
+    XLSX.writeFile(wb, `SplitSync_Backup_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setToast({ message: "Data exported successfully", id: crypto.randomUUID() });
+  };
+
+  const handleImportExcel = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+
+        // Retrieve data from sheets
+        const tripsSheet = wb.Sheets["Trips Summary"];
+        const membersSheet = wb.Sheets["Members Detail"];
+        const logsSheet = wb.Sheets["Transaction Logs"];
+
+        if (!tripsSheet) {
+          throw new Error("Invalid file format: 'Trips Summary' sheet missing.");
+        }
+
+        const rawTrips = XLSX.utils.sheet_to_json(tripsSheet);
+        const rawMembers = membersSheet ? XLSX.utils.sheet_to_json(membersSheet) : [];
+        const rawLogs = logsSheet ? XLSX.utils.sheet_to_json(logsSheet) : [];
+
+        // Reconstruct the trips state
+        const reconstructedTrips = rawTrips.map(rt => {
+          const tripId = rt.ID;
+          const tripMembers = rawMembers.filter(rm => rm['Trip ID'] === tripId).map(rm => ({
+            id: rm['Member ID'],
+            name: rm['Member Name'],
+            received: rm['Received Amount'] || 0,
+            expense: rm['Expense Amount'] || 0,
+            toGive: rm['To Give'] || 0,
+            toGet: rm['To Get'] || 0,
+            remaining: rm['Remaining Balance'] || 0
+          }));
+
+          const tripLogs = rawLogs.filter(rl => rl['Trip ID'] === tripId).map(rl => ({
+            id: rl['Log ID'],
+            date: rl['Log Date'],
+            action: rl['Action Type'],
+            description: rl['Description'],
+            amount: rl['Total Amount'] || 0,
+            splitAmount: rl['Split Per Person'] || 0,
+            memberIds: typeof rl['Member IDs Involved'] === 'string' ? rl['Member IDs Involved'].split(',').map(s => s.trim()) : []
+          }));
+
+          return {
+            id: tripId,
+            tripName: rt['Trip Name'],
+            isSingleDay: rt['Single Day'] === 'Yes',
+            startDate: rt['Start Date'],
+            endDate: rt['End Date'],
+            numberOfDays: rt['Days Count'],
+            createdAt: rt['Created At'],
+            members: tripMembers,
+            logs: tripLogs
+          };
+        });
+
+        if (reconstructedTrips.length === 0) {
+          throw new Error("No trips found in the file.");
+        }
+
+        const prevTrips = [...trips];
+        setHistory(prev => [...prev, { action: "Imported from Excel", state: prevTrips }]);
+        setTrips(reconstructedTrips);
+        setToast({ message: `Successfully imported ${reconstructedTrips.length} trips`, id: crypto.randomUUID(), canUndo: true });
+        e.target.value = ''; // Reset input
+      } catch (err) {
+        setToast({ message: "Import failed: " + err.message, id: crypto.randomUUID() });
+        console.error(err);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
 
   // ---- Member Methods ----
   const handleAddMember = (e) => {
@@ -398,9 +561,26 @@ function App() {
       <div className="hero">
         <h1 className="gradient-text">Split Your Expenses</h1>
         <p className="text-muted text-lg mb-8">Effortlessly track trips, group expenses, and balances.</p>
-        <button className="btn btn-primary text-xl px-8 py-4" onClick={() => openModal('CREATE_TRIP')}>
-          <Plus size={24} /> Create a new Day / Trip
-        </button>
+        <div className="flex flex-col items-center gap-4">
+          <button className="btn btn-primary text-xl px-8 py-4" onClick={() => openModal('CREATE_TRIP')}>
+            <Plus size={24} /> Create a new Day / Trip
+          </button>
+
+          <div className="flex gap-4 justify-center mt-4 flex-wrap">
+            <button className="btn btn-secondary flex items-center gap-2" title="Export all data to Excel" onClick={handleExportExcel}>
+              <Download size={18} /> Export Results
+            </button>
+            <label className="btn btn-secondary flex items-center gap-2 cursor-pointer" title="Import data from Excel">
+              <Upload size={18} /> Import Data
+              <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} style={{ display: 'none' }} />
+            </label>
+            {trips.length > 0 && (
+              <button className="btn btn-danger flex items-center gap-2" title="Delete all trips" onClick={handleClearAllTrips}>
+                <Trash size={18} /> Clear All
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="home-filter-bar glass mt-8 mb-8">
@@ -447,9 +627,18 @@ function App() {
             const totalSpent = trip.members.reduce((acc, m) => acc + m.expense, 0);
             return (
               <div key={trip.id} className="glass-card trip-card-content" onClick={() => setCurrentTripId(trip.id)}>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-2xl font-bold">{trip.tripName}</h3>
-                  <span className="badge">{trip.isSingleDay ? '1 Day' : `${trip.numberOfDays} Days`}</span>
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-2xl font-bold truncate pr-4">{trip.tripName}</h3>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="badge">{trip.isSingleDay ? '1 Day' : `${trip.numberOfDays} Days`}</span>
+                    <button
+                      className="btn btn-danger p-1 text-sm rounded-lg opacity-80 hover:opacity-100 transition-opacity"
+                      onClick={(e) => handleIndividualDelete(e, trip.id)}
+                      title="Delete Trip"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-muted flex items-center gap-2 mb-4 text-sm">
                   <Calendar size={16} />
@@ -475,6 +664,7 @@ function App() {
       </div>
     </div>
   );
+
 
   const renderCurrentTrip = () => {
     if (!currentTrip) return null;
