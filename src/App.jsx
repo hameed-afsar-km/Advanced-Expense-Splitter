@@ -12,6 +12,18 @@ function App() {
   const [currentTripId, setCurrentTripId] = useState(null);
   const [toast, setToast] = useState(null);
   const [history, setHistory] = useState([]);
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentTripId]);
 
   const { currency, setCurrency, themePrimary, setThemePrimary, themeSecondary, setThemeSecondary } = useSettingsStore();
 
@@ -566,13 +578,13 @@ function App() {
     <div className="container">
       <div className="hero">
         <h1 className="gradient-text">Split Your Expenses</h1>
-        <p className="text-muted text-lg mb-8">Effortlessly track trips, group expenses, and balances.</p>
-        <div className="flex flex-col items-center gap-4">
+        <p>Effortlessly track trips, group expenses, and balances.</p>
+        <div className="hero-actions-container">
           <button className="btn btn-primary text-xl px-8 py-4" onClick={() => openModal('CREATE_TRIP')}>
             <Plus size={24} /> Create a new Day / Trip
           </button>
 
-          <div className="flex gap-4 justify-center mt-4 flex-wrap">
+          <div className="flex gap-4 justify-center flex-wrap">
             <button className="btn btn-secondary flex items-center gap-2" title="Export all data to Excel" onClick={handleExportExcel}>
               <Download size={18} /> Export Results
             </button>
@@ -1154,59 +1166,80 @@ function App() {
     }
     else if (modalState.type === 'SETTINGS') {
       title = 'Settings';
-      const commonCurrencies = ['$', '€', '£', '₹', '¥', 'A$', 'C$', '₣', 'Rp', '₩'];
+      const commonCurrencies = [
+        { label: 'US Dollar ($)', value: '$' },
+        { label: 'Euro (€)', value: '€' },
+        { label: 'British Pound (£)', value: '£' },
+        { label: 'Indian Rupee (₹)', value: '₹' },
+        { label: 'Japanese Yen (¥)', value: '¥' },
+        { label: 'Australian Dollar (A$)', value: 'A$' },
+        { label: 'Canadian Dollar (C$)', value: 'C$' },
+        { label: 'Swiss Franc (₣)', value: '₣' },
+        { label: 'Indonesian Rupiah (Rp)', value: 'Rp' },
+        { label: 'South Korean Won (₩)', value: '₩' }
+      ];
+
       content = (
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="input-label mb-2">Currency Symbol</label>
-            <div className="flex flex-wrap gap-2">
-              {commonCurrencies.map(c => (
-                <button
-                  key={c}
-                  className={`btn ${currency === c ? 'btn-primary' : 'btn-secondary'} px-3 py-1`}
-                  onClick={() => setCurrency(c)}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-            <div className="mt-3">
-              <input
-                type="text"
-                className="input-base"
-                placeholder="Custom Currency Symbol..."
+        <div className="flex flex-col gap-6">
+          <div className="settings-group">
+            <label className="input-label mb-2">Currency Denomination</label>
+            <div className="select-wrapper">
+              <select
+                className="input-base cursor-pointer appearance-none"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                maxLength={5}
-              />
+                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-glass)' }}
+              >
+                {commonCurrencies.map(c => (
+                  <option key={c.value} value={c.value} style={{ background: '#13131a' }}>{c.label}</option>
+                ))}
+              </select>
             </div>
           </div>
-          <div>
-            <label className="input-label">Primary Theme Color</label>
-            <div className="flex items-center gap-4 bg-black/20 p-2 rounded-xl border border-[var(--border-glass)]">
-              <input
-                type="color"
-                className="w-12 h-12 bg-transparent rounded cursor-pointer border-none p-0 outline-none"
-                value={themePrimary}
-                onChange={(e) => setThemePrimary(e.target.value)}
-              />
-              <span className="text-muted font-mono uppercase">{themePrimary}</span>
+
+          <div className="settings-group">
+            <label className="input-label mb-3">App Appearance</label>
+            <div className="flex flex-col gap-4">
+              <div className="theme-color-picker glass p-4 rounded-2xl flex items-center justify-between border border-glass">
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold mb-1">Primary Accent</span>
+                  <span className="text-xs text-muted">Brand & Main Actions</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono text-muted uppercase tracking-widest">{themePrimary}</span>
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 shadow-lg cursor-pointer">
+                    <input
+                      type="color"
+                      className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer bg-transparent border-none appearance-none"
+                      value={themePrimary}
+                      onChange={(e) => setThemePrimary(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="theme-color-picker glass p-4 rounded-2xl flex items-center justify-between border border-glass">
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold mb-1">Secondary Accent</span>
+                  <span className="text-xs text-muted">Highlights & Effects</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono text-muted uppercase tracking-widest">{themeSecondary}</span>
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 shadow-lg cursor-pointer">
+                    <input
+                      type="color"
+                      className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer bg-transparent border-none appearance-none"
+                      value={themeSecondary}
+                      onChange={(e) => setThemeSecondary(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div>
-            <label className="input-label">Secondary Theme Color</label>
-            <div className="flex items-center gap-4 bg-black/20 p-2 rounded-xl border border-[var(--border-glass)]">
-              <input
-                type="color"
-                className="w-12 h-12 bg-transparent rounded cursor-pointer border-none p-0 outline-none"
-                value={themeSecondary}
-                onChange={(e) => setThemeSecondary(e.target.value)}
-              />
-              <span className="text-muted font-mono uppercase">{themeSecondary}</span>
-            </div>
-          </div>
-          <div className="flex justify-end mt-4">
-            <button type="button" className="btn btn-secondary w-full sm:w-auto" onClick={closeModal}>Done</button>
+
+          <div className="flex justify-end mt-2">
+            <button type="button" className="btn btn-primary w-full" onClick={closeModal}>Save & Close</button>
           </div>
         </div>
       );
@@ -1222,42 +1255,63 @@ function App() {
     );
   };
 
+  if (showSplash) {
+    return (
+      <div className="splash-screen">
+        <div className="splash-content">
+          <div className="splash-logo">
+            <span className="split">Split</span><span className="sync">Sync</span>
+          </div>
+          <div className="splash-loader">
+            <div className="loader-ring"></div>
+            <div className="loader-ring"></div>
+            <div className="loader-ring"></div>
+          </div>
+          <div className="splash-tagline">Managing memories, not just expenses.</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="blob blob-1"></div>
-      <div className="blob blob-2"></div>
+      <div className="background-ornaments">
+        <div className="blob blob-1"></div>
+        <div className="blob blob-2"></div>
+        <div className="grid-overlay"></div>
+      </div>
 
-      <header className="border-b border-glass mb-4 sticky top-0 z-50" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(16px)' }}>
-        <div className="container py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold cursor-pointer transition-transform hover:scale-105" onClick={() => setCurrentTripId(null)}>
-            Split<span className="text-accent-1">Sync</span>
+      <header className="site-header">
+        <div className="container header-inner">
+          <h1 className="logo" onClick={() => setCurrentTripId(null)}>
+            Split<span className="accent">Sync</span>
           </h1>
-          <div className="flex items-center gap-2">
-            <button className="btn btn-secondary text-sm px-3 py-2 border-none" onClick={handleUndo} title="Undo last action">
-              <Undo2 size={18} />
+          <div className="header-actions">
+            <button className="nav-icon-btn" onClick={handleUndo} title="Undo last action">
+              <Undo2 size={20} />
             </button>
-            <button className="btn btn-secondary text-sm px-3 py-2 border-none" onClick={() => openModal('SETTINGS')} title="Settings">
-              <Settings size={18} />
+            <button className="nav-icon-btn" onClick={() => openModal('SETTINGS')} title="Settings">
+              <Settings size={20} />
             </button>
           </div>
         </div>
       </header>
 
-      <main>
+      <main className="main-content">
         {currentTripId ? renderCurrentTrip() : renderHome()}
       </main>
 
       {renderModals()}
 
       {toast && (
-        <div className="toast-container">
+        <div className="toast-container" key={toast.id}>
           <div className="toast-content">
             <span className="font-medium">{toast.message}</span>
-            <button className="btn btn-secondary text-sm px-3 py-1 ml-4" onClick={handleUndo}>
+            <button className="btn-undo-mini" onClick={handleUndo}>
               Undo
             </button>
           </div>
-          <div className="toast-progress-bar" key={toast.id}></div>
+          <div className="toast-progress-bar"></div>
         </div>
       )}
       <footer className="border-t border-glass mt-12 py-8 text-center text-muted">
