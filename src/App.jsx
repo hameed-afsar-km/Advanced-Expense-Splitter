@@ -1198,40 +1198,34 @@ function App() {
 
           <div className="settings-group">
             <label className="input-label mb-3">App Appearance</label>
-            <div className="flex flex-col gap-4">
-              <div className="theme-color-picker glass p-4 rounded-2xl flex items-center justify-between border border-glass">
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold mb-1">Primary Accent</span>
-                  <span className="text-xs text-muted">Brand & Main Actions</span>
+            <div className="flex flex-col gap-2">
+              <div className="theme-color-card">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-bold">Primary Accent</span>
+                  <span className="text-xs text-muted">Core brand & main buttons</span>
+                  <span className="text-xs font-mono mt-1 opacity-60 uppercase tracking-tighter">{themePrimary}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-muted uppercase tracking-widest">{themePrimary}</span>
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 shadow-lg cursor-pointer">
-                    <input
-                      type="color"
-                      className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer bg-transparent border-none appearance-none"
-                      value={themePrimary}
-                      onChange={(e) => setThemePrimary(e.target.value)}
-                    />
-                  </div>
+                <div className="color-input-container">
+                  <input
+                    type="color"
+                    value={themePrimary}
+                    onChange={(e) => setThemePrimary(e.target.value)}
+                  />
                 </div>
               </div>
 
-              <div className="theme-color-picker glass p-4 rounded-2xl flex items-center justify-between border border-glass">
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold mb-1">Secondary Accent</span>
-                  <span className="text-xs text-muted">Highlights & Effects</span>
+              <div className="theme-color-card">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-bold">Secondary Accent</span>
+                  <span className="text-xs text-muted">Subtle highlights & gradients</span>
+                  <span className="text-xs font-mono mt-1 opacity-60 uppercase tracking-tighter">{themeSecondary}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-muted uppercase tracking-widest">{themeSecondary}</span>
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 shadow-lg cursor-pointer">
-                    <input
-                      type="color"
-                      className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer bg-transparent border-none appearance-none"
-                      value={themeSecondary}
-                      onChange={(e) => setThemeSecondary(e.target.value)}
-                    />
-                  </div>
+                <div className="color-input-container">
+                  <input
+                    type="color"
+                    value={themeSecondary}
+                    onChange={(e) => setThemeSecondary(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
