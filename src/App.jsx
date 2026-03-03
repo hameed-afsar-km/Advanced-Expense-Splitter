@@ -156,21 +156,27 @@ function App() {
 
   const handleIndividualDelete = (e, tripId) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this trip?")) {
-      const prevTrips = [...trips];
-      setHistory(prev => [...prev, { action: "Deleted Individual Trip", state: prevTrips }]);
-      setTrips(prev => prev.filter(t => t.id !== tripId));
-      setToast({ message: "Trip deleted", id: crypto.randomUUID(), canUndo: true });
-    }
+    openModal('CONFIRM_DELETE_INDIVIDUAL', tripId);
+  };
+
+  const handleIndividualDeleteFinal = (tripId) => {
+    const prevTrips = [...trips];
+    setHistory(prev => [...prev, { action: "Deleted Individual Trip", state: prevTrips }]);
+    setTrips(prev => prev.filter(t => t.id !== tripId));
+    setToast({ message: "Trip deleted", id: crypto.randomUUID(), canUndo: true });
+    closeModal();
   };
 
   const handleClearAllTrips = () => {
-    if (window.confirm("Are you sure you want to delete ALL trips? This cannot be undone unless you have a backup.")) {
-      const prevTrips = [...trips];
-      setHistory(prev => [...prev, { action: "Cleared all trips", state: prevTrips }]);
-      setTrips([]);
-      setToast({ message: "All trips cleared", id: crypto.randomUUID(), canUndo: true });
-    }
+    openModal('CONFIRM_CLEAR_ALL_TRIPS');
+  };
+
+  const handleClearAllTripsFinal = () => {
+    const prevTrips = [...trips];
+    setHistory(prev => [...prev, { action: "Cleared all trips", state: prevTrips }]);
+    setTrips([]);
+    setToast({ message: "All trips cleared", id: crypto.randomUUID(), canUndo: true });
+    closeModal();
   };
 
   const handleExportExcel = () => {
@@ -1069,13 +1075,39 @@ function App() {
       );
     }
     else if (modalState.type === 'CONFIRM_DELETE_TRIP') {
-      title = 'Delete Trip';
+      title = 'Delete Current Trip';
       content = (
         <div className="flex flex-col gap-4">
           <p className="text-muted">Are you sure you want to delete this entire trip? This action cannot be undone.</p>
           <div className="flex justify-end gap-3 mt-4">
             <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
             <button type="button" className="btn btn-danger" onClick={handleDeleteTrip}>Delete Permanently</button>
+          </div>
+        </div>
+      );
+    }
+    else if (modalState.type === 'CONFIRM_DELETE_INDIVIDUAL') {
+      const tripId = modalState.data;
+      const trip = trips.find(t => t.id === tripId);
+      title = 'Delete Trip';
+      content = (
+        <div className="flex flex-col gap-4">
+          <p className="text-muted">Are you sure you want to delete the trip <strong>{trip?.tripName}</strong>? This action cannot be undone.</p>
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+            <button type="button" className="btn btn-danger" onClick={() => handleIndividualDeleteFinal(tripId)}>Delete Permanently</button>
+          </div>
+        </div>
+      );
+    }
+    else if (modalState.type === 'CONFIRM_CLEAR_ALL_TRIPS') {
+      title = 'Clear All Trips';
+      content = (
+        <div className="flex flex-col gap-4">
+          <p className="text-muted">Are you sure you want to delete <strong>ALL</strong> trips? This action will remove everything and cannot be undone unless you have an exported backup.</p>
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+            <button type="button" className="btn btn-danger" onClick={handleClearAllTripsFinal}>Clear Everything</button>
           </div>
         </div>
       );
