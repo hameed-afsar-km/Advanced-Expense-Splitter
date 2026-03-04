@@ -692,11 +692,11 @@ function App() {
 
     return (
       <div className="container">
-        <button className="btn btn-secondary mb-8 text-sm" onClick={() => setCurrentTripId(null)}>
+        <button className="btn btn-secondary mb-12 text-sm" onClick={() => setCurrentTripId(null)}>
           <ArrowLeft size={16} /> Back to Trips
         </button>
 
-        <div className="glass-card mb-8">
+        <div className="glass-card mb-12">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div>
               <div className="flex items-center gap-4 flex-wrap">
@@ -730,7 +730,7 @@ function App() {
         </div>
 
         {currentTrip.members.length > 0 && (
-          <div className="glass mb-8">
+          <div className="glass mb-12">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Quick Actions</h3>
               <div className="flex gap-2 flex-wrap">
@@ -762,7 +762,7 @@ function App() {
           </div>
         )}
 
-        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+        <div className="flex justify-between items-center mb-10 flex-wrap gap-4">
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Users size={24} className="text-accent-1" />
             Members <span className="text-muted text-lg">({currentTrip.members.length})</span>
@@ -790,7 +790,7 @@ function App() {
           <div className="member-list mb-8">
             {currentTrip.members.filter(m => m.name.toLowerCase().includes(tripSearchTerm.toLowerCase())).map(member => (
               <div key={member.id} className="member-item">
-                <div className="flex items-center justify-between w-full mb-2 border-b border-glass pb-4 flex-wrap gap-4" style={{ borderColor: 'var(--border-glass)' }}>
+                <div className="flex items-center justify-between w-full mb-4 border-b border-glass pb-4 flex-wrap gap-4">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <h3 className="text-xl font-bold truncate">{member.name}</h3>
                     <button
