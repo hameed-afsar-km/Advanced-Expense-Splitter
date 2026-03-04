@@ -457,6 +457,8 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid var(--border-glass);
   border-radius: 20px;
+  padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .glass-card {
@@ -869,6 +871,7 @@ body {
     gap: 1rem;
   }
 
+  .glass,
   .glass-card,
   .footer-content {
     padding: 1.25rem;
@@ -1015,6 +1018,21 @@ body {
 
 .w-full {
   width: 100%;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .md-inline {
+    display: inline !important;
+  }
+
+  .md-px-3 {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
 }
 
 .sticky {
