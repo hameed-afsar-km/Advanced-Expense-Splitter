@@ -645,7 +645,7 @@ function App() {
             const totalSpent = trip.members.reduce((acc, m) => acc + m.expense, 0);
             return (
               <div key={trip.id} className="glass-card trip-card-content" onClick={() => setCurrentTripId(trip.id)}>
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-2">
                   <h3 className="text-2xl font-bold truncate pr-4">{trip.tripName}</h3>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="badge">{trip.isSingleDay ? '1 Day' : `${trip.numberOfDays} Days`}</span>
@@ -658,7 +658,7 @@ function App() {
                     </button>
                   </div>
                 </div>
-                <div className="text-muted flex items-center gap-2 mb-4 text-sm">
+                <div className="text-muted flex items-center gap-2 mb-2 text-sm">
                   <Calendar size={16} />
                   <span>
                     {trip.isSingleDay
@@ -667,7 +667,7 @@ function App() {
                     }
                   </span>
                 </div>
-                <div className="flex justify-between items-center mt-6 border-t border-glass pt-4" style={{ borderColor: 'var(--border-glass)' }}>
+                <div className="flex justify-between items-center mt-4 border-t border-glass pt-3" style={{ borderColor: 'var(--border-glass)' }}>
                   <div className="flex items-center gap-2 text-muted text-sm">
                     <Users size={16} /> {trip.members.length} members
                   </div>
@@ -734,14 +734,14 @@ function App() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Quick Actions</h3>
               <div className="flex gap-2 flex-wrap">
-                <button className="btn btn-secondary text-sm px-4 py-2" onClick={() => openModal('VIEW_TRIP_LOGS')}>
-                  <FileText size={16} /> Logs
+                <button className="btn btn-secondary text-sm px-2 md-px-3 py-2" onClick={() => openModal('VIEW_TRIP_LOGS')}>
+                  <FileText size={16} /> <span className="hidden md-inline">Logs</span>
                 </button>
-                <button className="btn btn-secondary text-sm px-4 py-2" onClick={() => openModal('CONFIRM_RESET_STATS')}>
-                  <RefreshCw size={16} /> Reset
+                <button className="btn btn-secondary text-sm px-2 md-px-3 py-2" onClick={() => openModal('CONFIRM_RESET_STATS')}>
+                  <RefreshCw size={16} /> <span className="hidden md-inline">Reset</span>
                 </button>
-                <button className="btn btn-danger text-sm px-4 py-2" onClick={() => openModal('CONFIRM_DELETE_TRIP')}>
-                  <Trash2 size={16} /> Delete Trip
+                <button className="btn btn-danger text-sm px-2 md-px-3 py-2" onClick={() => openModal('CONFIRM_DELETE_TRIP')}>
+                  <Trash2 size={16} /> <span className="hidden md-inline">Delete Trip</span>
                 </button>
               </div>
             </div>
@@ -864,10 +864,10 @@ function App() {
             <label className="input-label">Trip/Day Name</label>
             <input type="text" name="tripName" required className="input-base" placeholder="e.g., Goa Trip 2026" />
           </div>
-          <div className="flex items-center gap-2 mt-2">
-            <input type="checkbox" id="isSingleDay" name="isSingleDay" defaultChecked className="w-4 h-4" />
-            <label htmlFor="isSingleDay">Single Day Event</label>
-          </div>
+          <label className="checkbox-item mt-2">
+            <input type="checkbox" id="isSingleDay" name="isSingleDay" defaultChecked />
+            <span>Single Day Event</span>
+          </label>
           <div>
             <label className="input-label">Start Date</label>
             <input type="date" name="startDate" required className="input-base" />

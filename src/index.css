@@ -576,6 +576,31 @@ body {
   padding-left: 0.25rem;
 }
 
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-glass);
+}
+
+.checkbox-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent-1);
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-1);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
 /* Settings UI */
 .settings-group {
   margin-bottom: 2rem;
