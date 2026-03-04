@@ -25,7 +25,7 @@ function App() {
     window.scrollTo(0, 0);
   }, [currentTripId]);
 
-  const { currency, setCurrency, themePrimary, setThemePrimary, themeSecondary, setThemeSecondary } = useSettingsStore();
+  const { currency, setCurrency, themePrimary, setThemePrimary, themeSecondary, setThemeSecondary, resetTheme } = useSettingsStore();
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent-1', themePrimary);
@@ -1228,6 +1228,16 @@ function App() {
                   />
                 </div>
               </div>
+              <button
+                type="button"
+                className="btn btn-secondary text-sm flex items-center justify-center gap-2 mt-2"
+                onClick={() => {
+                  resetTheme();
+                  setToast({ message: "Theme colors reset to default", id: crypto.randomUUID() });
+                }}
+              >
+                <RefreshCw size={14} /> Reset Theme to Default
+              </button>
             </div>
           </div>
 
@@ -1252,9 +1262,11 @@ function App() {
     return (
       <div className="splash-screen">
         <div className="splash-ornaments">
-          <div className="aurora-wave aw-1"></div>
-          <div className="aurora-wave aw-2"></div>
-          <div className="star-field"></div>
+          <div className="blob-container">
+            <div className="blob" style={{ opacity: 0.4 }}></div>
+            <div className="blob blob-2" style={{ opacity: 0.4 }}></div>
+          </div>
+          <div className="mesh-grid"></div>
         </div>
         <div className="splash-content">
           <div className="kinetic-logo-container">
@@ -1279,11 +1291,12 @@ function App() {
   return (
     <>
       <div className="background-ornaments">
-        <div className="aurora-wave aw-1"></div>
-        <div className="aurora-wave aw-2"></div>
-        <div className="aurora-wave aw-3"></div>
-        <div className="star-field"></div>
-        <div className="cosmic-dust"></div>
+        <div className="blob-container">
+          <div className="blob"></div>
+          <div className="blob blob-2"></div>
+          <div className="blob blob-3"></div>
+        </div>
+        <div className="mesh-grid"></div>
       </div>
 
       <header className="site-header">
