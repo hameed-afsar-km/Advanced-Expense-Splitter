@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List, Settings, Edit3, Undo2, Download, Upload, Trash } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List, Settings, Edit3, Undo2, Download, Upload, Trash, MonitorSmartphone } from 'lucide-react';
 import { useSettingsStore } from './store';
 import * as XLSX from 'xlsx';
 
@@ -13,6 +13,8 @@ function App() {
   const [toast, setToast] = useState(null);
   const [history, setHistory] = useState([]);
   const [showSplash, setShowSplash] = useState(true);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -20,6 +22,40 @@ function App() {
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  // PWA Install Prompt
+  useEffect(() => {
+    // Check if already installed (standalone mode)
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+      setIsInstalled(true);
+    }
+
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+      setIsInstalled(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!installPrompt) return;
+    const result = await installPrompt.prompt();
+    if (result.outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1305,6 +1341,16 @@ function App() {
             Split<span className="accent gradient-text">Sync</span>
           </h1>
           <div className="header-actions">
+            {!isInstalled && installPrompt && (
+              <button
+                className="pwa-install-btn"
+                onClick={handleInstallPWA}
+                title="Add to Home Screen"
+              >
+                <MonitorSmartphone size={16} />
+                <span className="pwa-install-label">Install App</span>
+              </button>
+            )}
             <button className="nav-icon-btn" onClick={handleUndo} title="Undo last action">
               <Undo2 size={20} />
             </button>
