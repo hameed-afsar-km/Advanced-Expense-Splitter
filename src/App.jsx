@@ -1333,6 +1333,10 @@ function App() {
         </div>
       )}
       <footer className="site-footer">
+        <div className="footer-canvas">
+          <div className="footer-blob"></div>
+          <div className="footer-blob footer-blob-2"></div>
+        </div>
         <div className="container footer-content">
           <div className="footer-top">
             <div className="footer-brand">

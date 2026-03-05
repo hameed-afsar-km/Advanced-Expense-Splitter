@@ -1079,6 +1079,7 @@ input[type="checkbox"] {
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-glass);
   position: relative;
+  overflow: hidden;
 }
 
 .site-footer::before {
@@ -1092,7 +1093,52 @@ input[type="checkbox"] {
   opacity: 0.5;
 }
 
+.footer-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.15;
+  filter: blur(80px);
+}
+
+.footer-blob {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: var(--accent-1);
+  top: -200px;
+  left: -100px;
+  animation: footerMove 20s infinite alternate ease-in-out;
+}
+
+.footer-blob-2 {
+  background: var(--accent-2);
+  top: auto;
+  bottom: -200px;
+  right: -100px;
+  left: auto;
+  animation-delay: -10s;
+}
+
+@keyframes footerMove {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(100px, 50px) scale(1.2);
+  }
+
+  100% {
+    transform: translate(-50px, 100px) scale(1);
+  }
+}
+
 .footer-content {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 3rem;
