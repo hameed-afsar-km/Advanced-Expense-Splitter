@@ -1272,3 +1272,131 @@ input[type="checkbox"] {
     text-align: center;
   }
 }
+
+/* ---- Trip Quota Pill ---- */
+.trip-quota-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 160px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-glass);
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.trip-quota-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  opacity: 0.18;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 100px;
+}
+
+.trip-quota-text {
+  position: relative;
+  z-index: 1;
+  padding: 0 14px;
+}
+
+.trip-quota-full {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* ---- Limit Reached Modal ---- */
+.limit-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+}
+
+.limit-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 32px -4px var(--accent-1);
+  animation: pwaInstallPulse 2.5s ease-in-out infinite;
+}
+
+.limit-icon {
+  color: white;
+}
+
+.limit-desc {
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 340px;
+}
+
+.limit-desc strong {
+  color: var(--text-main);
+}
+
+.limit-feature-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+}
+
+.limit-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.limit-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.limit-cta-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.limit-cta-btn {
+  font-size: 1rem;
+  padding: 0.875rem 1.5rem;
+}
+
+.limit-footnote {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+}

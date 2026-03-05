@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List, Settings, Edit3, Undo2, Download, Upload, Trash, MonitorSmartphone } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List, Settings, Edit3, Undo2, Download, Upload, Trash, MonitorSmartphone, Smartphone, Zap } from 'lucide-react';
 import { useSettingsStore } from './store';
 import * as XLSX from 'xlsx';
 
@@ -158,8 +158,18 @@ function App() {
   };
 
   // ---- Trip Methods ----
+  const TRIP_LIMIT = 5;
+  const MEMBER_LIMIT = 10;
+
   const handleCreateTrip = (e) => {
     e.preventDefault();
+
+    if (trips.length >= TRIP_LIMIT) {
+      closeModal();
+      setTimeout(() => openModal('LIMIT_REACHED', { type: 'trips', limit: TRIP_LIMIT }), 50);
+      return;
+    }
+
     const formData = new FormData(e.target);
     const tripName = formData.get('tripName');
     const isSingleDay = formData.get('isSingleDay') === 'on';
@@ -373,13 +383,21 @@ function App() {
   // ---- Member Methods ----
   const handleAddMember = (e) => {
     e.preventDefault();
+
+    const trip = trips.find(t => t.id === currentTripId);
+    if (trip && trip.members.length >= MEMBER_LIMIT) {
+      closeModal();
+      setTimeout(() => openModal('LIMIT_REACHED', { type: 'members', limit: MEMBER_LIMIT }), 50);
+      return;
+    }
+
     const formData = new FormData(e.target);
     const name = formData.get('name');
 
-    updateTrip(currentTripId, trip => ({
-      ...trip,
+    updateTrip(currentTripId, t => ({
+      ...t,
       members: [
-        ...trip.members,
+        ...t.members,
         {
           id: crypto.randomUUID(),
           name,
@@ -619,6 +637,13 @@ function App() {
           <button className="btn btn-primary text-xl px-8 py-4" onClick={() => openModal('CREATE_TRIP')}>
             <Plus size={24} /> Create a new Day / Trip
           </button>
+          <div className="trip-quota-pill">
+            <span className="trip-quota-bar" style={{ width: `${(trips.length / TRIP_LIMIT) * 100}%` }} />
+            <span className="trip-quota-text">
+              {trips.length} / {TRIP_LIMIT} trips used
+              {trips.length >= TRIP_LIMIT && <span className="trip-quota-full"> · Limit reached</span>}
+            </span>
+          </div>
 
           <div className="flex gap-4 justify-center flex-wrap">
             <button className="btn btn-secondary flex items-center gap-2" title="Export all data to Excel" onClick={handleExportExcel}>
@@ -1280,6 +1305,54 @@ function App() {
           <div className="flex justify-end mt-2">
             <button type="button" className="btn btn-primary w-full" onClick={closeModal}>Save & Close</button>
           </div>
+        </div>
+      );
+    }
+    else if (modalState.type === 'LIMIT_REACHED') {
+      const isTrips = modalState.data?.type === 'trips';
+      const limit = modalState.data?.limit;
+      title = isTrips ? '✦ Trip Limit Reached' : '✦ Member Limit Reached';
+      content = (
+        <div className="limit-modal-body">
+          <div className="limit-icon-wrap">
+            <Zap size={32} className="limit-icon" />
+          </div>
+          <p className="limit-desc">
+            You've reached the <strong>{isTrips ? `${limit} trip` : `${limit} member`}</strong> limit on the free web version.
+          </p>
+          <div className="limit-feature-list">
+            <div className="limit-feature-item">
+              <span className="limit-check">✓</span>
+              <span>Unlimited {isTrips ? 'trips & days' : 'members per trip'}</span>
+            </div>
+            <div className="limit-feature-item">
+              <span className="limit-check">✓</span>
+              <span>Offline access — works without internet</span>
+            </div>
+            <div className="limit-feature-item">
+              <span className="limit-check">✓</span>
+              <span>Native mobile experience</span>
+            </div>
+            <div className="limit-feature-item">
+              <span className="limit-check">✓</span>
+              <span>Faster & smoother on the go</span>
+            </div>
+          </div>
+          <div className="limit-cta-group">
+            <button
+              className="btn btn-primary w-full limit-cta-btn"
+              onClick={() => {
+                setToast({ message: 'Mobile app coming soon! Stay tuned.', id: crypto.randomUUID() });
+                closeModal();
+              }}
+            >
+              <Smartphone size={18} /> Get the Mobile App
+            </button>
+            <button type="button" className="btn btn-secondary w-full" onClick={closeModal}>
+              Maybe Later
+            </button>
+          </div>
+          <p className="limit-footnote">To use more on web, delete an existing {isTrips ? 'trip' : 'member'} first.</p>
         </div>
       );
     }
