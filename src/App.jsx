@@ -1,7 +1,17 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, ArrowLeft, Trash2, Users, DollarSign, ArrowUpRight, ArrowDownRight, Share2, Calendar, RefreshCw, FileText, List, Settings, Edit3, Undo2, Download, Upload, Trash, MonitorSmartphone, Smartphone, Zap } from 'lucide-react';
-import { useSettingsStore } from './store';
 import * as XLSX from 'xlsx';
+import { useSettingsStore } from './store';
+
+// Components
+import { SplashScreen } from './components/SplashScreen';
+import { Header } from './components/layout/Header';
+import { Footer } from './components/layout/Footer';
+import { Toast } from './components/ui/Toast';
+import { ModalManager } from './components/modals/ModalManager';
+
+// Pages
+import { Home } from './pages/Home';
+import { TripDetails } from './pages/TripDetails';
 
 function App() {
   const [trips, setTrips] = useState(() => {
@@ -25,7 +35,6 @@ function App() {
 
   // PWA Install Prompt
   useEffect(() => {
-    // Check if already installed (standalone mode)
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
       setIsInstalled(true);
     }
@@ -68,20 +77,14 @@ function App() {
     document.documentElement.style.setProperty('--accent-2', themeSecondary);
   }, [themePrimary, themeSecondary]);
 
-  // Home query state
+  // States for filtering and search
   const [homeSearchTerm, setHomeSearchTerm] = useState('');
   const [homeSortBy, setHomeSortBy] = useState('date-desc');
   const [homeFilterType, setHomeFilterType] = useState('all');
   const [homeDateFrom, setHomeDateFrom] = useState('');
   const [homeDateTo, setHomeDateTo] = useState('');
-
-  // Trip query state
   const [tripSearchTerm, setTripSearchTerm] = useState('');
-
-  // Modal query state
   const [modalSearchTerm, setModalSearchTerm] = useState('');
-
-  // Modals state
   const [modalState, setModalState] = useState({ isOpen: false, type: null, data: null });
 
   const currentTrip = useMemo(() => trips.find(t => t.id === currentTripId), [trips, currentTripId]);
@@ -115,11 +118,9 @@ function App() {
       });
   }, [trips, homeSearchTerm, homeFilterType, homeDateFrom, homeDateTo, homeSortBy]);
 
-  // This runs every single time the 'trips' array changes
   useEffect(() => {
     localStorage.setItem('splitsync_trips', JSON.stringify(trips));
   }, [trips]);
-
 
   useEffect(() => {
     if (toast) {
@@ -163,7 +164,6 @@ function App() {
 
   const handleCreateTrip = (e) => {
     e.preventDefault();
-
     if (trips.length >= TRIP_LIMIT) {
       closeModal();
       setTimeout(() => openModal('LIMIT_REACHED', { type: 'trips', limit: TRIP_LIMIT }), 50);
@@ -242,10 +242,7 @@ function App() {
       setToast({ message: "No data to export", id: crypto.randomUUID() });
       return;
     }
-
     const wb = XLSX.utils.book_new();
-
-    // Sheet 1: Trips
     const tripsData = trips.map(t => ({
       ID: t.id,
       'Trip Name': t.tripName,
@@ -258,7 +255,6 @@ function App() {
     const tripsSheet = XLSX.utils.json_to_sheet(tripsData);
     XLSX.utils.book_append_sheet(wb, tripsSheet, "Trips Summary");
 
-    // Sheet 2: Members
     const membersData = [];
     trips.forEach(t => {
       t.members.forEach(m => {
@@ -278,7 +274,6 @@ function App() {
     const membersSheet = XLSX.utils.json_to_sheet(membersData);
     XLSX.utils.book_append_sheet(wb, membersSheet, "Members Detail");
 
-    // Sheet 3: Logs
     const logsData = [];
     trips.forEach(t => {
       (t.logs || []).forEach(l => {
@@ -298,7 +293,6 @@ function App() {
     const logsSheet = XLSX.utils.json_to_sheet(logsData);
     XLSX.utils.book_append_sheet(wb, logsSheet, "Transaction Logs");
 
-    // Save File
     XLSX.writeFile(wb, `SplitSync_Backup_${new Date().toISOString().split('T')[0]}.xlsx`);
     setToast({ message: "Data exported successfully", id: crypto.randomUUID() });
   };
@@ -306,27 +300,20 @@ function App() {
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
-
-        // Retrieve data from sheets
         const tripsSheet = wb.Sheets["Trips Summary"];
         const membersSheet = wb.Sheets["Members Detail"];
         const logsSheet = wb.Sheets["Transaction Logs"];
-
-        if (!tripsSheet) {
-          throw new Error("Invalid file format: 'Trips Summary' sheet missing.");
-        }
+        if (!tripsSheet) throw new Error("Invalid file format: 'Trips Summary' sheet missing.");
 
         const rawTrips = XLSX.utils.sheet_to_json(tripsSheet);
         const rawMembers = membersSheet ? XLSX.utils.sheet_to_json(membersSheet) : [];
         const rawLogs = logsSheet ? XLSX.utils.sheet_to_json(logsSheet) : [];
 
-        // Reconstruct the trips state
         const reconstructedTrips = rawTrips.map(rt => {
           const tripId = rt.ID;
           const tripMembers = rawMembers.filter(rm => rm['Trip ID'] === tripId).map(rm => ({
@@ -338,7 +325,6 @@ function App() {
             toGet: rm['To Get'] || 0,
             remaining: rm['Remaining Balance'] || 0
           }));
-
           const tripLogs = rawLogs.filter(rl => rl['Trip ID'] === tripId).map(rl => ({
             id: rl['Log ID'],
             date: rl['Log Date'],
@@ -348,7 +334,6 @@ function App() {
             splitAmount: rl['Split Per Person'] || 0,
             memberIds: typeof rl['Member IDs Involved'] === 'string' ? rl['Member IDs Involved'].split(',').map(s => s.trim()) : []
           }));
-
           return {
             id: tripId,
             tripName: rt['Trip Name'],
@@ -362,52 +347,33 @@ function App() {
           };
         });
 
-        if (reconstructedTrips.length === 0) {
-          throw new Error("No trips found in the file.");
-        }
-
+        if (reconstructedTrips.length === 0) throw new Error("No trips found in the file.");
         const prevTrips = [...trips];
         setHistory(prev => [...prev, { action: "Imported from Excel", state: prevTrips }]);
         setTrips(reconstructedTrips);
         setToast({ message: `Successfully imported ${reconstructedTrips.length} trips`, id: crypto.randomUUID(), canUndo: true });
-        e.target.value = ''; // Reset input
+        e.target.value = '';
       } catch (err) {
         setToast({ message: "Import failed: " + err.message, id: crypto.randomUUID() });
-        console.error(err);
       }
     };
     reader.readAsBinaryString(file);
   };
 
-
   // ---- Member Methods ----
   const handleAddMember = (e) => {
     e.preventDefault();
-
     const trip = trips.find(t => t.id === currentTripId);
     if (trip && trip.members.length >= MEMBER_LIMIT) {
       closeModal();
       setTimeout(() => openModal('LIMIT_REACHED', { type: 'members', limit: MEMBER_LIMIT }), 50);
       return;
     }
-
     const formData = new FormData(e.target);
     const name = formData.get('name');
-
     updateTrip(currentTripId, t => ({
       ...t,
-      members: [
-        ...t.members,
-        {
-          id: crypto.randomUUID(),
-          name,
-          received: 0,
-          expense: 0,
-          toGive: 0,
-          toGet: 0,
-          remaining: 0
-        }
-      ]
+      members: [...t.members, { id: crypto.randomUUID(), name, received: 0, expense: 0, toGive: 0, toGet: 0, remaining: 0 }]
     }));
     closeModal();
   };
@@ -417,12 +383,10 @@ function App() {
     const formData = new FormData(e.target);
     const newName = formData.get('name');
     const memberId = modalState.data.memberId;
-
     updateTrip(currentTripId, trip => ({
       ...trip,
       members: trip.members.map(m => m.id === memberId ? { ...m, name: newName } : m)
     }), "Edited member name");
-
     closeModal();
   };
 
@@ -430,12 +394,7 @@ function App() {
     e.preventDefault();
     const formData = new FormData(e.target);
     const tripName = formData.get('tripName');
-
-    updateTrip(currentTripId, trip => ({
-      ...trip,
-      tripName
-    }), "Edited trip name");
-
+    updateTrip(currentTripId, trip => ({ ...trip, tripName }), "Edited trip name");
     closeModal();
   };
 
@@ -453,36 +412,15 @@ function App() {
     const formData = new FormData(e.target);
     const amount = parseFloat(formData.get('amount'));
     const selectedMembers = formData.getAll('members');
-
     if (!selectedMembers.length || isNaN(amount)) return;
-
     const y = amount / selectedMembers.length;
     const expenseName = formData.get('expenseName') || 'Unnamed Expense';
-
     updateTrip(currentTripId, trip => {
       const newMembers = trip.members.map(member => {
         if (!selectedMembers.includes(member.id)) return member;
-
-        const newExpense = member.expense + y;
-        const newRemaining = member.remaining - y;
-
-        return {
-          ...member,
-          expense: newExpense,
-          remaining: newRemaining
-        };
+        return { ...member, expense: member.expense + y, remaining: member.remaining - y };
       });
-
-      const newLog = {
-        id: crypto.randomUUID(),
-        date: new Date().toISOString(),
-        action: 'Add Expense',
-        description: expenseName,
-        amount: amount,
-        splitAmount: y,
-        memberIds: selectedMembers
-      };
-
+      const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Add Expense', description: expenseName, amount, splitAmount: y, memberIds: selectedMembers };
       return { ...trip, members: newMembers, logs: [...(trip.logs || []), newLog] };
     });
     closeModal();
@@ -493,32 +431,13 @@ function App() {
     const formData = new FormData(e.target);
     const amount = parseFloat(formData.get('amount'));
     const selectedMembers = formData.getAll('members');
-
     if (!selectedMembers.length || isNaN(amount)) return;
-
     updateTrip(currentTripId, trip => {
       const newMembers = trip.members.map(member => {
         if (!selectedMembers.includes(member.id)) return member;
-
-        const newReceived = member.received + amount;
-        const newRemaining = member.remaining + amount;
-
-        return {
-          ...member,
-          received: newReceived,
-          remaining: newRemaining
-        };
+        return { ...member, received: member.received + amount, remaining: member.remaining + amount };
       });
-
-      const newLog = {
-        id: crypto.randomUUID(),
-        date: new Date().toISOString(),
-        action: 'Add Amount',
-        description: 'Amount Added',
-        amount: amount,
-        memberIds: selectedMembers
-      };
-
+      const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Add Amount', description: 'Amount Added', amount, memberIds: selectedMembers };
       return { ...trip, members: newMembers, logs: [...(trip.logs || []), newLog] };
     });
     closeModal();
@@ -529,28 +448,13 @@ function App() {
     const formData = new FormData(e.target);
     const amount = parseFloat(formData.get('amount'));
     const selectedMembers = formData.getAll('members');
-
     if (!selectedMembers.length || isNaN(amount)) return;
-
     updateTrip(currentTripId, trip => {
       const newMembers = trip.members.map(member => {
         if (!selectedMembers.includes(member.id)) return member;
-        return {
-          ...member,
-          toGive: member.toGive + amount,
-          remaining: member.remaining + amount
-        };
+        return { ...member, toGive: member.toGive + amount, remaining: member.remaining + amount };
       });
-
-      const newLog = {
-        id: crypto.randomUUID(),
-        date: new Date().toISOString(),
-        action: 'To Give',
-        description: 'To Give',
-        amount: amount,
-        memberIds: selectedMembers
-      };
-
+      const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'To Give', description: 'To Give', amount, memberIds: selectedMembers };
       return { ...trip, members: newMembers, logs: [...(trip.logs || []), newLog] };
     });
     closeModal();
@@ -561,28 +465,13 @@ function App() {
     const formData = new FormData(e.target);
     const amount = parseFloat(formData.get('amount'));
     const selectedMembers = formData.getAll('members');
-
     if (!selectedMembers.length || isNaN(amount)) return;
-
     updateTrip(currentTripId, trip => {
       const newMembers = trip.members.map(member => {
         if (!selectedMembers.includes(member.id)) return member;
-        return {
-          ...member,
-          toGet: member.toGet + amount,
-          remaining: member.remaining - amount
-        };
+        return { ...member, toGet: member.toGet + amount, remaining: member.remaining - amount };
       });
-
-      const newLog = {
-        id: crypto.randomUUID(),
-        date: new Date().toISOString(),
-        action: 'To Get',
-        description: 'To Get',
-        amount: amount,
-        memberIds: selectedMembers
-      };
-
+      const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'To Get', description: 'To Get', amount, memberIds: selectedMembers };
       return { ...trip, members: newMembers, logs: [...(trip.logs || []), newLog] };
     });
     closeModal();
@@ -593,14 +482,7 @@ function App() {
       const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Reset Data', description: 'Reset all members data to zero.', memberIds: [] };
       return {
         ...trip,
-        members: trip.members.map(m => ({
-          ...m,
-          received: 0,
-          expense: 0,
-          toGive: 0,
-          toGet: 0,
-          remaining: 0
-        })),
+        members: trip.members.map(m => ({ ...m, received: 0, expense: 0, toGive: 0, toGet: 0, remaining: 0 })),
         logs: [...(trip.logs || []), newLog]
       };
     });
@@ -613,789 +495,26 @@ function App() {
       const newLog = { id: crypto.randomUUID(), date: new Date().toISOString(), action: 'Reset Member', description: `Reset data for ${member?.name} to zero.`, memberIds: [memberId] };
       return {
         ...trip,
-        members: trip.members.map(m => m.id === memberId ? {
-          ...m,
-          received: 0,
-          expense: 0,
-          toGive: 0,
-          toGet: 0,
-          remaining: 0
-        } : m),
+        members: trip.members.map(m => m.id === memberId ? { ...m, received: 0, expense: 0, toGive: 0, toGet: 0, remaining: 0 } : m),
         logs: [...(trip.logs || []), newLog]
       };
     });
     closeModal();
   };
 
-  // ---- Renders ----
-  const renderHome = () => (
-    <div className="container">
-      <div className="hero">
-        <h1 className="gradient-text">Split Your Expenses</h1>
-        <p>Effortlessly track trips, group expenses, and balances.</p>
-        <div className="hero-actions-container">
-          <button className="btn btn-primary text-xl px-8 py-4" onClick={() => openModal('CREATE_TRIP')}>
-            <Plus size={24} /> Create a new Day / Trip
-          </button>
-          <div className="trip-quota-pill">
-            <span className="trip-quota-bar" style={{ width: `${(trips.length / TRIP_LIMIT) * 100}%` }} />
-            <span className="trip-quota-text">
-              {trips.length} / {TRIP_LIMIT} trips used
-              {trips.length >= TRIP_LIMIT && <span className="trip-quota-full"> · Limit reached</span>}
-            </span>
-          </div>
-
-          <div className="flex gap-4 justify-center flex-wrap">
-            <button className="btn btn-secondary flex items-center gap-2" title="Export all data to Excel" onClick={handleExportExcel}>
-              <Download size={18} /> Export Results
-            </button>
-            <label className="btn btn-secondary flex items-center gap-2 cursor-pointer" title="Import data from Excel">
-              <Upload size={18} /> Import Data
-              <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} style={{ display: 'none' }} />
-            </label>
-            {trips.length > 0 && (
-              <button className="btn btn-danger flex items-center gap-2" title="Delete all trips" onClick={handleClearAllTrips}>
-                <Trash size={18} /> Clear All
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="home-filter-bar glass mt-8 mb-8">
-        <div className="filter-item search">
-          <label className="input-label">Search Trips/Date</label>
-          <input type="text" className="input-base" placeholder="Name or Date..." value={homeSearchTerm} onChange={e => setHomeSearchTerm(e.target.value)} />
-        </div>
-        <div className="filter-item type">
-          <label className="input-label">Type</label>
-          <select className="input-base" value={homeFilterType} onChange={e => setHomeFilterType(e.target.value)}>
-            <option value="all" style={{ background: '#13131a' }}>All Types</option>
-            <option value="single" style={{ background: '#13131a' }}>Single Day</option>
-            <option value="multi" style={{ background: '#13131a' }}>Multi Day</option>
-          </select>
-        </div>
-        <div className="filter-item sort">
-          <label className="input-label">Sort</label>
-          <select className="input-base" value={homeSortBy} onChange={e => setHomeSortBy(e.target.value)}>
-            <option value="date-desc" style={{ background: '#13131a' }}>Newest First</option>
-            <option value="date-asc" style={{ background: '#13131a' }}>Oldest First</option>
-            <option value="name-asc" style={{ background: '#13131a' }}>Name (A-Z)</option>
-            <option value="name-desc" style={{ background: '#13131a' }}>Name (Z-A)</option>
-          </select>
-        </div>
-        <div className="filter-item date-from">
-          <label className="input-label">From Date</label>
-          <input type="date" className="input-base" value={homeDateFrom} onChange={e => setHomeDateFrom(e.target.value)} />
-        </div>
-        <div className="filter-item date-to">
-          <label className="input-label">To Date</label>
-          <input type="date" className="input-base" value={homeDateTo} onChange={e => setHomeDateTo(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="trip-grid mt-6">
-        {filteredTrips.length === 0 ? (
-          <div className="empty-state w-full" style={{ gridColumn: '1 / -1' }}>
-            <Calendar size={48} className="text-muted mb-4 mx-auto" opacity={0.5} />
-            <h3 className="text-xl mb-2">No trips found</h3>
-            <p className="text-muted">{trips.length === 0 ? "Create your first trip or day to start tracking expenses." : "Adjust your search or filters to find trips."}</p>
-          </div>
-        ) : (
-          filteredTrips.map(trip => {
-            const totalSpent = trip.members.reduce((acc, m) => acc + m.expense, 0);
-            return (
-              <div key={trip.id} className="glass-card trip-card-content" onClick={() => setCurrentTripId(trip.id)}>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-2xl font-bold truncate pr-4">{trip.tripName}</h3>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="badge">{trip.isSingleDay ? '1 Day' : `${trip.numberOfDays} Days`}</span>
-                    <button
-                      className="btn btn-danger p-1 text-sm rounded-lg opacity-80 hover:opacity-100 transition-opacity"
-                      onClick={(e) => handleIndividualDelete(e, trip.id)}
-                      title="Delete Trip"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-                <div className="text-muted flex items-center gap-2 mb-2 text-sm">
-                  <Calendar size={16} />
-                  <span>
-                    {trip.isSingleDay
-                      ? (trip.startDate ? new Date(trip.startDate).toLocaleDateString() : 'N/A')
-                      : `${trip.startDate ? new Date(trip.startDate).toLocaleDateString() : 'N/A'} - ${trip.endDate ? new Date(trip.endDate).toLocaleDateString() : 'N/A'}`
-                    }
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mt-4 border-t border-glass pt-3" style={{ borderColor: 'var(--border-glass)' }}>
-                  <div className="flex items-center gap-2 text-muted text-sm">
-                    <Users size={16} /> {trip.members.length} members
-                  </div>
-                  <div className="font-bold text-lg">
-                    {currency}{totalSpent.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-
-
-  const renderCurrentTrip = () => {
-    if (!currentTrip) return null;
-
-    const totalSpent = currentTrip.members.reduce((acc, m) => acc + m.expense, 0);
-    const totalReceived = currentTrip.members.reduce((acc, m) => acc + m.received, 0);
-
-    return (
-      <div className="container">
-        <button className="btn btn-secondary mb-12 text-sm" onClick={() => setCurrentTripId(null)}>
-          <ArrowLeft size={16} /> Back to Trips
-        </button>
-
-        <div className="glass-card mb-12">
-          <div className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <div className="flex items-center gap-4 flex-wrap">
-                <h1 className="text-3xl font-bold gradient-text">{currentTrip.tripName}</h1>
-                <button
-                  className="btn btn-secondary text-sm px-2 py-1"
-                  onClick={() => openModal('EDIT_TRIP', { tripName: currentTrip.tripName })}
-                >
-                  <Edit3 size={14} />
-                </button>
-              </div>
-              <div className="text-muted flex items-center gap-2 mt-2">
-                <Calendar size={16} />
-                {currentTrip.isSingleDay
-                  ? `${new Date(currentTrip.startDate).toLocaleDateString()} (Single Day)`
-                  : `${new Date(currentTrip.startDate).toLocaleDateString()} to ${new Date(currentTrip.endDate).toLocaleDateString()} (${currentTrip.numberOfDays} Days)`
-                }
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="text-right">
-                <div className="stat-label">Total Spent</div>
-                <div className="text-2xl font-bold text-danger">{currency}{totalSpent.toFixed(2)}</div>
-              </div>
-              <div className="text-right">
-                <div className="stat-label">Total Pool (Received)</div>
-                <div className="text-2xl font-bold text-success">{currency}{totalReceived.toFixed(2)}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {currentTrip.members.length > 0 && (
-          <div className="glass mb-12">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Quick Actions</h3>
-              <div className="flex gap-2 flex-wrap">
-                <button className="btn btn-secondary text-sm px-2 md-px-3 py-2" onClick={() => openModal('VIEW_TRIP_LOGS')}>
-                  <FileText size={16} /> <span className="hidden md-inline">Logs</span>
-                </button>
-                <button className="btn btn-secondary text-sm px-2 md-px-3 py-2" onClick={() => openModal('CONFIRM_RESET_STATS')}>
-                  <RefreshCw size={16} /> <span className="hidden md-inline">Reset</span>
-                </button>
-                <button className="btn btn-danger text-sm px-2 md-px-3 py-2" onClick={() => openModal('CONFIRM_DELETE_TRIP')}>
-                  <Trash2 size={16} /> <span className="hidden md-inline">Delete Trip</span>
-                </button>
-              </div>
-            </div>
-            <div className="actions-grid mt-0">
-              <button className="btn btn-primary" onClick={() => openModal('ADD_EXPENSE')}>
-                <Share2 size={18} /> Add Expense
-              </button>
-              <button className="btn btn-secondary" onClick={() => openModal('ADD_AMOUNT')}>
-                <DollarSign size={18} /> Add Amount
-              </button>
-              <button className="btn btn-secondary" onClick={() => openModal('TO_GIVE')}>
-                <ArrowUpRight size={18} /> To Give
-              </button>
-              <button className="btn btn-secondary" onClick={() => openModal('TO_GET')}>
-                <ArrowDownRight size={18} /> To Get
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center mb-10 flex-wrap gap-4">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Users size={24} className="text-accent-1" />
-            Members <span className="text-muted text-lg">({currentTrip.members.length})</span>
-          </h2>
-          <div className="member-search-container">
-            <input
-              type="text"
-              className="input-base member-search-input"
-              placeholder="Search member name..."
-              value={tripSearchTerm}
-              onChange={(e) => setTripSearchTerm(e.target.value)}
-            />
-            <button className="btn btn-primary add-member-btn" onClick={() => openModal('ADD_MEMBER')}>
-              <Plus size={18} /> <span className="btn-text">Add Member</span>
-            </button>
-          </div>
-        </div>
-
-        {currentTrip.members.length === 0 ? (
-          <div className="empty-state mb-8">
-            <Users size={40} className="text-muted mb-4 mx-auto" opacity={0.5} />
-            <p className="text-muted">No members added yet. Add members to start sharing expenses.</p>
-          </div>
-        ) : (
-          <div className="member-list mb-8">
-            {currentTrip.members.filter(m => m.name.toLowerCase().includes(tripSearchTerm.toLowerCase())).map(member => (
-              <div key={member.id} className="member-item">
-                <div className="flex items-center justify-between w-full mb-4 border-b border-glass pb-4 flex-wrap gap-4">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <h3 className="text-xl font-bold truncate">{member.name}</h3>
-                    <button
-                      className="btn btn-secondary text-sm p-1 flex-shrink-0"
-                      onClick={() => openModal('EDIT_MEMBER', { memberId: member.id, name: member.name })}
-                      title="Edit Member"
-                    >
-                      <Edit3 size={14} />
-                    </button>
-                  </div>
-                  <div className="flex gap-2 flex-wrap justify-end">
-                    <button className="btn btn-secondary text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => openModal('VIEW_MEMBER_LOGS', member.id)}>
-                      <List size={14} /> <span className="hidden md-inline">Details</span>
-                    </button>
-                    <button className="btn btn-secondary text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => openModal('CONFIRM_RESET_MEMBER', member.id)}>
-                      <RefreshCw size={14} /> <span className="hidden md-inline">Reset</span>
-                    </button>
-                    <button className="btn btn-danger text-sm px-2 md-px-3 py-1 flex items-center gap-1" onClick={() => openModal('CONFIRM_DELETE_MEMBER', member.id)}>
-                      <Trash2 size={14} /> <span className="hidden md-inline">Remove</span>
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-row md:flex-row flex-wrap gap-4 w-full">
-                  <div className="stat-box">
-                    <div className="stat-label">Received</div>
-                    <div className="stat-value text-success">{currency}{member.received.toFixed(2)}</div>
-                  </div>
-                  <div className="stat-box">
-                    <div className="stat-label">Expense</div>
-                    <div className="stat-value text-danger">{currency}{member.expense.toFixed(2)}</div>
-                  </div>
-                  <div className="stat-box">
-                    <div className="stat-label">To Give</div>
-                    <div className="stat-value" style={{ color: member.toGive > 0 ? 'var(--warning)' : 'inherit' }}>
-                      {currency}{member.toGive.toFixed(2)}
-                    </div>
-                  </div>
-                  <div className="stat-box">
-                    <div className="stat-label">To Get</div>
-                    <div className="stat-value" style={{ color: member.toGet > 0 ? 'var(--accent-1)' : 'inherit' }}>
-                      {currency}{member.toGet.toFixed(2)}
-                    </div>
-                  </div>
-                  <div className="stat-box">
-                    <div className="stat-label">Remaining</div>
-                    <div className="stat-value" style={{ color: member.remaining < 0 ? 'var(--danger)' : 'inherit' }}>
-                      {currency}{Math.abs(member.remaining).toFixed(2)}{member.remaining < 0 ? ' (due)' : ''}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // ---- Modal Renders ----
-  const renderModals = () => {
-    if (!modalState.isOpen) return null;
-
-    let title = '';
-    let content = null;
-
-    if (modalState.type === 'CREATE_TRIP') {
-      title = 'Create a new Day / Trip';
-      content = (
-        <form onSubmit={handleCreateTrip} className="flex flex-col gap-4">
-          <div>
-            <label className="input-label">Trip/Day Name</label>
-            <input type="text" name="tripName" required className="input-base" placeholder="e.g., Goa Trip 2026" />
-          </div>
-          <label className="checkbox-item mt-2">
-            <input type="checkbox" id="isSingleDay" name="isSingleDay" defaultChecked />
-            <span>Single Day Event</span>
-          </label>
-          <div>
-            <label className="input-label">Start Date</label>
-            <input type="date" name="startDate" required className="input-base" />
-          </div>
-          <div id="endDateContainer">
-            <label className="input-label">End Date (Optional for Single Day)</label>
-            <input type="date" name="endDate" className="input-base" />
-          </div>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Create</button>
-          </div>
-        </form>
-      );
-    }
-    else if (modalState.type === 'ADD_MEMBER') {
-      title = 'Add Member';
-      content = (
-        <form onSubmit={handleAddMember} className="flex flex-col gap-4">
-          <div>
-            <label className="input-label">Member Name</label>
-            <input type="text" name="name" required className="input-base" placeholder="e.g., Alice" />
-          </div>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Add Member</button>
-          </div>
-        </form>
-      );
-    }
-    // Shared template for the 4 action forms
-    else if (['ADD_EXPENSE', 'ADD_AMOUNT', 'TO_GIVE', 'TO_GET'].includes(modalState.type)) {
-      const typeConfig = {
-        'ADD_EXPENSE': { title: 'Add Expense', btn: 'Split Expense', hasName: true, onSubmit: handleAddExpense },
-        'ADD_AMOUNT': { title: 'Add Amount (Received)', btn: 'Add Amount', hasName: false, onSubmit: handleAddAmount },
-        'TO_GIVE': { title: 'To Give', btn: 'Update To Give', hasName: false, onSubmit: handleToGive },
-        'TO_GET': { title: 'To Get', btn: 'Update To Get', hasName: false, onSubmit: handleToGet },
-      };
-
-      const config = typeConfig[modalState.type];
-      title = config.title;
-
-      const updateSelectedCount = (form) => {
-        if (!form) return;
-        const checked = form.querySelectorAll('input[name="members"]:checked').length;
-        const display = form.querySelector('#selectedCountDisplay');
-        if (display) display.textContent = `(${checked} Selected)`;
-      };
-
-      content = (
-        <form onSubmit={config.onSubmit} className="flex flex-col gap-4">
-          {config.hasName && (
-            <div>
-              <label className="input-label">Expense Name</label>
-              <input type="text" name="expenseName" required className="input-base" placeholder="e.g., Dinner" />
-            </div>
-          )}
-          <div>
-            <label className="input-label">Amount</label>
-            <input type="number" step="0.01" name="amount" required className="input-base" placeholder="0.00" />
-          </div>
-
-          <div className="mt-2">
-            <div className="flex justify-between items-center mb-2">
-              <label className="input-label" style={{ marginBottom: 0 }}>
-                Select Members
-                <span id="selectedCountDisplay" className="text-accent-1 font-bold ml-2">({currentTrip?.members.length} Selected)</span>
-              </label>
-              <button
-                type="button"
-                className="text-accent-1 text-sm font-medium select-button"
-                style={{ textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
-                onClick={(e) => {
-                  const form = e.target.closest('form');
-                  const visibleCheckboxes = form.querySelectorAll('.checkbox-item:not([style*="display: none"]) input[type="checkbox"]');
-                  const allChecked = Array.from(visibleCheckboxes).every(cb => cb.checked);
-                  visibleCheckboxes.forEach(cb => cb.checked = !allChecked);
-                  updateSelectedCount(form);
-                }}
-              >
-                Select / Deselect Visible
-              </button>
-            </div>
-            <input
-              type="text"
-              className="input-base mb-3"
-              placeholder="Search members..."
-              value={modalSearchTerm}
-              onChange={(e) => setModalSearchTerm(e.target.value)}
-            />
-            <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto" style={{ paddingRight: '8px' }}>
-              {currentTrip?.members.map(member => {
-                const isMatch = member.name.toLowerCase().includes(modalSearchTerm.toLowerCase());
-                return (
-                  <label key={member.id} className="checkbox-item" style={{ display: isMatch ? 'flex' : 'none' }}>
-                    <input type="checkbox" name="members" value={member.id} defaultChecked onChange={(e) => updateSelectedCount(e.target.closest('form'))} />
-                    <span className="font-medium">{member.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="submit" className="btn btn-primary">{config.btn}</button>
-          </div>
-        </form>
-      );
-    }
-    else if (modalState.type === 'VIEW_TRIP_LOGS') {
-      title = 'Trip Logs';
-      const logs = currentTrip?.logs || [];
-      content = (
-        <div className="flex flex-col gap-4">
-          {logs.length === 0 ? (
-            <p className="text-muted text-center py-4">No activity logged yet.</p>
-          ) : (
-            <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2">
-              {logs.slice().reverse().map(log => (
-                <div key={log.id} className="p-3 glass" style={{ borderRadius: '8px' }}>
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="font-bold text-accent-1">{log.action}</span>
-                    <span className="text-xs text-muted">{new Date(log.date).toLocaleString()}</span>
-                  </div>
-                  <p className="text-sm m-0">{log.description}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex justify-end mt-2">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Close</button>
-          </div>
-        </div>
-      );
-    }
-    else if (modalState.type === 'VIEW_MEMBER_LOGS') {
-      const memberId = modalState.data;
-      const member = currentTrip?.members.find(m => m.id === memberId);
-      title = `Expense Details: ${member?.name}`;
-
-      const memberLogs = (currentTrip?.logs || []).filter(log => log.memberIds?.includes(memberId));
-
-      content = (
-        <div className="flex flex-col gap-4">
-          {memberLogs.length === 0 ? (
-            <p className="text-muted text-center py-4">No events found for this member.</p>
-          ) : (
-            <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2">
-              {memberLogs.slice().reverse().map(log => {
-                let amountEffect = "";
-                let colorClass = "";
-                let titleText = log.description;
-
-                if (log.action === 'Add Expense') {
-                  amountEffect = `-$${log.splitAmount?.toFixed(2)}`;
-                  colorClass = "text-danger";
-                } else if (log.action === 'Add Amount') {
-                  amountEffect = `+$${log.amount?.toFixed(2)}`;
-                  colorClass = "text-success";
-                } else if (log.action === 'To Give') {
-                  amountEffect = `+$${log.amount?.toFixed(2)}`;
-                  colorClass = "text-success";
-                } else if (log.action === 'To Get') {
-                  amountEffect = `-$${log.amount?.toFixed(2)}`;
-                  colorClass = "text-danger";
-                }
-
-                return (
-                  <div key={log.id} className="p-3 glass" style={{ borderRadius: '8px' }}>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="font-bold text-sm text-accent-1">{titleText}</div>
-                        <div className="text-xs text-muted">{new Date(log.date).toLocaleString()}</div>
-                      </div>
-                      <div className={`font-bold ${colorClass}`}>{amountEffect}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <div className="flex justify-end mt-2">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Close</button>
-          </div>
-        </div>
-      );
-    }
-    else if (modalState.type === 'EDIT_MEMBER') {
-      title = 'Edit Member';
-      content = (
-        <form onSubmit={handleEditMember} className="flex flex-col gap-4">
-          <div>
-            <label className="input-label">Member Name</label>
-            <input type="text" name="name" required className="input-base" defaultValue={modalState.data?.name} />
-          </div>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Save Changes</button>
-          </div>
-        </form>
-      );
-    }
-    else if (modalState.type === 'EDIT_TRIP') {
-      title = 'Edit Trip Name';
-      content = (
-        <form onSubmit={handleEditTrip} className="flex flex-col gap-4">
-          <div>
-            <label className="input-label">Trip/Day Name</label>
-            <input type="text" name="tripName" required className="input-base" defaultValue={modalState.data?.tripName} />
-          </div>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Save Changes</button>
-          </div>
-        </form>
-      );
-    }
-    else if (modalState.type === 'CONFIRM_DELETE_TRIP') {
-      title = 'Delete Current Trip';
-      content = (
-        <div className="flex flex-col gap-4">
-          <p className="text-muted">Are you sure you want to delete this entire trip? This action cannot be undone.</p>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="button" className="btn btn-danger" onClick={handleDeleteTrip}>Delete Permanently</button>
-          </div>
-        </div>
-      );
-    }
-    else if (modalState.type === 'CONFIRM_DELETE_INDIVIDUAL') {
-      const tripId = modalState.data;
-      const trip = trips.find(t => t.id === tripId);
-      title = 'Delete Trip';
-      content = (
-        <div className="flex flex-col gap-4">
-          <p className="text-muted">Are you sure you want to delete the trip <strong>{trip?.tripName}</strong>? This action cannot be undone.</p>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="button" className="btn btn-danger" onClick={() => handleIndividualDeleteFinal(tripId)}>Delete Permanently</button>
-          </div>
-        </div>
-      );
-    }
-    else if (modalState.type === 'CONFIRM_CLEAR_ALL_TRIPS') {
-      title = 'Clear All Trips';
-      content = (
-        <div className="flex flex-col gap-4">
-          <p className="text-muted">Are you sure you want to delete <strong>ALL</strong> trips? This action will remove everything and cannot be undone unless you have an exported backup.</p>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="button" className="btn btn-danger" onClick={handleClearAllTripsFinal}>Clear Everything</button>
-          </div>
-        </div>
-      );
-    }
-    else if (modalState.type === 'CONFIRM_RESET_STATS') {
-      title = 'Reset Trip Data';
-      content = (
-        <div className="flex flex-col gap-4">
-          <p className="text-muted">Are you sure you want to reset all data for all members in this trip to zero?</p>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="button" className="btn btn-danger" onClick={handleResetStats}>Reset Data</button>
-          </div>
-        </div>
-      );
-    }
-    else if (modalState.type === 'CONFIRM_RESET_MEMBER') {
-      const memberId = modalState.data;
-      const member = currentTrip?.members.find(m => m.id === memberId);
-      title = 'Reset Member Stats';
-      content = (
-        <div className="flex flex-col gap-4">
-          <p className="text-muted">Are you sure you want to reset all data for member <strong>{member?.name}</strong> to zero?</p>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="button" className="btn btn-danger" onClick={() => handleResetMemberStats(memberId)}>Reset Data</button>
-          </div>
-        </div>
-      );
-    }
-    else if (modalState.type === 'CONFIRM_DELETE_MEMBER') {
-      const memberId = modalState.data;
-      const member = currentTrip?.members.find(m => m.id === memberId);
-      title = 'Remove Member';
-      content = (
-        <div className="flex flex-col gap-4">
-          <p className="text-muted">Are you sure you want to remove <strong>{member?.name}</strong> from this trip? Their expenses and history will be lost.</p>
-          <div className="flex justify-end gap-3 mt-4">
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-            <button type="button" className="btn btn-danger" onClick={() => handleDeleteMember(memberId)}>Remove Member</button>
-          </div>
-        </div>
-      );
-    }
-    else if (modalState.type === 'SETTINGS') {
-      title = 'Settings';
-      const commonCurrencies = [
-        { label: 'US Dollar ($)', value: '$' },
-        { label: 'Euro (€)', value: '€' },
-        { label: 'British Pound (£)', value: '£' },
-        { label: 'Indian Rupee (₹)', value: '₹' },
-        { label: 'Japanese Yen (¥)', value: '¥' },
-        { label: 'Australian Dollar (A$)', value: 'A$' },
-        { label: 'Canadian Dollar (C$)', value: 'C$' },
-        { label: 'Swiss Franc (₣)', value: '₣' },
-        { label: 'Indonesian Rupiah (Rp)', value: 'Rp' },
-        { label: 'South Korean Won (₩)', value: '₩' }
-      ];
-
-      content = (
-        <div className="flex flex-col gap-6">
-          <div className="settings-group">
-            <label className="input-label mb-2">Currency Denomination</label>
-            <div className="select-wrapper">
-              <select
-                className="input-base cursor-pointer"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-              >
-                {commonCurrencies.map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="settings-group">
-            <label className="input-label mb-3">App Appearance</label>
-            <div className="flex flex-col gap-2">
-              <div className="theme-color-card">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-bold">Primary Accent</span>
-                  <span className="text-xs text-muted">Core brand & main buttons</span>
-                  <span className="text-xs font-mono mt-1 opacity-60 uppercase tracking-tighter">{themePrimary}</span>
-                </div>
-                <div className="color-input-container">
-                  <input
-                    type="color"
-                    value={themePrimary}
-                    onChange={(e) => setThemePrimary(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="theme-color-card">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-bold">Secondary Accent</span>
-                  <span className="text-xs text-muted">Subtle highlights & gradients</span>
-                  <span className="text-xs font-mono mt-1 opacity-60 uppercase tracking-tighter">{themeSecondary}</span>
-                </div>
-                <div className="color-input-container">
-                  <input
-                    type="color"
-                    value={themeSecondary}
-                    onChange={(e) => setThemeSecondary(e.target.value)}
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                className="btn btn-secondary text-sm flex items-center justify-center gap-2 mt-2"
-                onClick={() => {
-                  resetTheme();
-                  setToast({ message: "Theme colors reset to default", id: crypto.randomUUID() });
-                }}
-              >
-                <RefreshCw size={14} /> Reset Theme to Default
-              </button>
-            </div>
-          </div>
-
-          <div className="flex justify-end mt-2">
-            <button type="button" className="btn btn-primary w-full" onClick={closeModal}>Save & Close</button>
-          </div>
-        </div>
-      );
-    }
-    else if (modalState.type === 'LIMIT_REACHED') {
-      const isTrips = modalState.data?.type === 'trips';
-      const limit = modalState.data?.limit;
-      title = isTrips ? '✦ Trip Limit Reached' : '✦ Member Limit Reached';
-      content = (
-        <div className="limit-modal-body">
-          <div className="limit-icon-wrap">
-            <Zap size={32} className="limit-icon" />
-          </div>
-          <p className="limit-desc">
-            You've reached the <strong>{isTrips ? `${limit} trip` : `${limit} member`}</strong> limit on the free web version.
-          </p>
-          <div className="limit-feature-list">
-            <div className="limit-feature-item">
-              <span className="limit-check">✓</span>
-              <span>Unlimited {isTrips ? 'trips & days' : 'members per trip'}</span>
-            </div>
-            <div className="limit-feature-item">
-              <span className="limit-check">✓</span>
-              <span>Offline access — works without internet</span>
-            </div>
-            <div className="limit-feature-item">
-              <span className="limit-check">✓</span>
-              <span>Native mobile experience</span>
-            </div>
-            <div className="limit-feature-item">
-              <span className="limit-check">✓</span>
-              <span>Faster & smoother on the go</span>
-            </div>
-          </div>
-          <div className="limit-cta-group">
-            <button
-              className="btn btn-primary w-full limit-cta-btn"
-              onClick={() => {
-                setToast({ message: 'Mobile app coming soon! Stay tuned.', id: crypto.randomUUID() });
-                closeModal();
-              }}
-            >
-              <Smartphone size={18} /> Get the Mobile App
-            </button>
-            <button type="button" className="btn btn-secondary w-full" onClick={closeModal}>
-              Maybe Later
-            </button>
-          </div>
-          <p className="limit-footnote">To use more on web, delete an existing {isTrips ? 'trip' : 'member'} first.</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
-        <div className="modal-content">
-          <h2 className="text-2xl font-bold mb-6 gradient-text">{title}</h2>
-          {content}
-        </div>
-      </div>
-    );
-  };
-
   if (showSplash) {
-    return (
-      <div className="splash-screen">
-        <div className="splash-ornaments">
-          <div className="blob-container">
-            <div className="blob" style={{ opacity: 0.4 }}></div>
-            <div className="blob blob-2" style={{ opacity: 0.4 }}></div>
-          </div>
-          <div className="mesh-grid"></div>
-        </div>
-        <div className="splash-content">
-          <div className="kinetic-logo-container">
-            <div className="kinetic-ring"></div>
-            <div className="kinetic-ring"></div>
-            <div className="kinetic-orb"></div>
-            <div className="logo splash-logo-text">
-              Split<span className="accent gradient-text">Sync</span>
-            </div>
-          </div>
-          <div className="splash-footer">
-            <div className="splash-tagline">Optimizing Group Travel</div>
-            <div className="splash-progress-track">
-              <div className="splash-progress-bar"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
+
+  const modalHandlers = {
+    handleCreateTrip, handleAddMember, handleAddExpense, handleAddAmount, handleToGive, handleToGet,
+    handleEditMember, handleEditTrip, handleDeleteTrip, handleIndividualDeleteFinal,
+    handleClearAllTripsFinal, handleResetStats, handleResetMemberStats, handleDeleteMember
+  };
+
+  const settingsProps = {
+    setCurrency, themePrimary, setThemePrimary, themeSecondary, setThemeSecondary, resetTheme, setToast
+  };
 
   return (
     <>
@@ -1408,81 +527,66 @@ function App() {
         <div className="mesh-grid"></div>
       </div>
 
-      <header className="site-header">
-        <div className="container header-inner">
-          <h1 className="logo" onClick={() => setCurrentTripId(null)}>
-            Split<span className="accent gradient-text">Sync</span>
-          </h1>
-          <div className="header-actions">
-            {!isInstalled && installPrompt && (
-              <button
-                className="pwa-install-btn"
-                onClick={handleInstallPWA}
-                title="Add to Home Screen"
-              >
-                <MonitorSmartphone size={16} />
-                <span className="pwa-install-label">Install App</span>
-              </button>
-            )}
-            <button className="nav-icon-btn" onClick={handleUndo} title="Undo last action">
-              <Undo2 size={20} />
-            </button>
-            <button className="nav-icon-btn" onClick={() => openModal('SETTINGS')} title="Settings">
-              <Settings size={20} />
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header 
+        onLogoClick={() => setCurrentTripId(null)}
+        onUndo={handleUndo}
+        onSettingsClick={() => openModal('SETTINGS')}
+        installPrompt={installPrompt}
+        isInstalled={isInstalled}
+        onInstall={handleInstallPWA}
+      />
 
       <main className="main-content">
-        {currentTripId ? renderCurrentTrip() : renderHome()}
+        {currentTripId ? (
+          <TripDetails 
+            currentTrip={currentTrip}
+            setCurrentTripId={setCurrentTripId}
+            openModal={openModal}
+            tripSearchTerm={tripSearchTerm}
+            setTripSearchTerm={setTripSearchTerm}
+            currency={currency}
+          />
+        ) : (
+          <Home 
+            trips={trips}
+            TRIP_LIMIT={TRIP_LIMIT}
+            openModal={openModal}
+            handleExportExcel={handleExportExcel}
+            handleImportExcel={handleImportExcel}
+            handleClearAllTrips={handleClearAllTrips}
+            homeSearchTerm={homeSearchTerm}
+            setHomeSearchTerm={setHomeSearchTerm}
+            homeFilterType={homeFilterType}
+            setHomeFilterType={setHomeFilterType}
+            homeSortBy={homeSortBy}
+            setHomeSortBy={setHomeSortBy}
+            homeDateFrom={homeDateFrom}
+            setHomeDateFrom={setHomeDateFrom}
+            homeDateTo={homeDateTo}
+            setHomeDateTo={setHomeDateTo}
+            filteredTrips={filteredTrips}
+            setCurrentTripId={setCurrentTripId}
+            handleIndividualDelete={handleIndividualDelete}
+            currency={currency}
+          />
+        )}
       </main>
 
-      {renderModals()}
+      <ModalManager 
+        modalState={modalState}
+        closeModal={closeModal}
+        handlers={modalHandlers}
+        currentTrip={currentTrip}
+        trips={trips}
+        modalSearchTerm={modalSearchTerm}
+        setModalSearchTerm={setModalSearchTerm}
+        currency={currency}
+        settings={settingsProps}
+      />
 
-      {toast && (
-        <div className="toast-container" key={toast.id}>
-          <div className="toast-content">
-            <span className="font-medium">{toast.message}</span>
-            <button className="btn-undo-mini" onClick={handleUndo}>
-              Undo
-            </button>
-          </div>
-          <div className="toast-progress-bar"></div>
-        </div>
-      )}
-      <footer className="site-footer">
-        <div className="footer-canvas">
-          <div className="footer-blob"></div>
-          <div className="footer-blob footer-blob-2"></div>
-        </div>
-        <div className="container footer-content">
-          <div className="footer-top">
-            <div className="footer-brand">
-              <h2 className="logo sm">Split<span className="accent gradient-text">Sync</span></h2>
-              <p className="footer-motto">Effortless splitting for modern groups.</p>
-            </div>
-            <div className="footer-ad-section">
-              <div className="ad-box-wrapper">
-                <ins className="adsbygoogle"
-                  style={{ display: 'block' }}
-                  data-ad-client="ca-pub-7299036615171019"
-                  data-ad-slot="YOUR_AD_SLOT_ID"
-                  data-ad-format="auto"
-                  data-full-width-responsive="true"></ins>
-                <div className="ad-fallback text-xs text-muted">A D V E R T I S E M E N T</div>
-              </div>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <div className="footer-credits">
-              <p>© {new Date().getFullYear()} SplitSync</p>
-              <span className="separator">•</span>
-              <p>Designed with ❤️ for travelers</p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Toast toast={toast} onUndo={handleUndo} />
+      
+      <Footer />
     </>
   );
 }
