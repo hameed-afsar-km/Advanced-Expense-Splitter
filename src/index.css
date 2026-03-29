@@ -1400,3 +1400,37 @@ input[type="checkbox"] {
   color: var(--text-muted);
   opacity: 0.6;
 }
+/* ---- Member Completion ---- */
+.member-item.completed {
+  opacity: 0.8;
+  border-color: var(--success);
+  background: rgba(16, 185, 129, 0.03);
+}
+
+.member-item.completed h3 {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.completion-checkbox {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  accent-color: var(--success);
+  transition: all 0.2s;
+}
+
+.completion-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}

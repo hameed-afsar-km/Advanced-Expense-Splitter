@@ -1,4 +1,4 @@
-import { ArrowLeft, Edit3, Calendar, FileText, RefreshCw, Trash2, Share2, DollarSign, ArrowUpRight, ArrowDownRight, Users, Plus, List } from 'lucide-react';
+import { ArrowLeft, Edit3, Calendar, FileText, RefreshCw, Trash2, Share2, DollarSign, ArrowUpRight, ArrowDownRight, Users, Plus, List, CheckCircle } from 'lucide-react';
 
 export function TripDetails({
   currentTrip,
@@ -112,10 +112,27 @@ export function TripDetails({
       ) : (
         <div className="member-list mb-8">
           {currentTrip.members.filter(m => m.name.toLowerCase().includes(tripSearchTerm.toLowerCase())).map(member => (
-            <div key={member.id} className="member-item">
+            <div key={member.id} className={`member-item ${member.isCompleted ? 'completed' : ''}`}>
               <div className="flex items-center justify-between w-full mb-4 border-b border-glass pb-4 flex-wrap gap-4">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <h3 className="text-xl font-bold truncate">{member.name}</h3>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      className="completion-checkbox" 
+                      checked={!!member.isCompleted} 
+                      onChange={() => openModal('CONFIRM_MEMBER_COMPLETION', member.id)}
+                      title={member.isCompleted ? "Mark as Incomplete" : "Mark as Completed"}
+                    />
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-bold truncate">{member.name}</h3>
+                      {member.isCompleted && (
+                        <span className="completion-badge">
+                          <CheckCircle size={12} />
+                          Completed
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <button
                     className="btn btn-secondary text-sm p-1 flex-shrink-0"
                     onClick={() => openModal('EDIT_MEMBER', { memberId: member.id, name: member.name })}

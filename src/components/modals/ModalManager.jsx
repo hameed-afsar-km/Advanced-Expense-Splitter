@@ -1,4 +1,4 @@
-import { Zap, Smartphone, RefreshCw } from 'lucide-react';
+import { Zap, Smartphone, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 
 export function ModalManager({
   modalState,
@@ -27,7 +27,8 @@ export function ModalManager({
     handleClearAllTripsFinal,
     handleResetStats,
     handleResetMemberStats,
-    handleDeleteMember
+    handleDeleteMember,
+    handleToggleMemberCompletion
   } = handlers;
 
   const {
@@ -346,6 +347,62 @@ export function ModalManager({
         <div className="flex justify-end gap-3 mt-4">
           <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
           <button type="button" className="btn btn-danger" onClick={() => handleDeleteMember(memberId)}>Remove Member</button>
+        </div>
+      </div>
+    );
+  }
+  else if (modalState.type === 'CONFIRM_MEMBER_COMPLETION') {
+    const memberId = modalState.data;
+    const member = currentTrip?.members.find(m => m.id === memberId);
+    const isMarkingComplete = !member?.isCompleted;
+    
+    title = isMarkingComplete ? 'Done for this Trip?' : 'Reopen Member Stats?';
+    content = (
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center gap-3 p-4 glass" style={{ borderRadius: '16px', borderLeft: isMarkingComplete ? '4px solid var(--success)' : '4px solid var(--warning)' }}>
+          {isMarkingComplete ? <CheckCircle className="text-success" size={24} /> : <AlertCircle className="text-warning" size={24} /> }
+          <div>
+            <div className="font-bold text-lg">{member?.name}</div>
+            <div className={`text-sm ${isMarkingComplete ? 'text-success' : 'text-warning'}`}>
+              {isMarkingComplete ? 'Summary at Completion' : 'Currently Marked Complete'}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="stat-box" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div className="stat-label">Total Expense</div>
+            <div className="text-xl font-bold text-danger">{currency}{member?.expense.toFixed(2)}</div>
+          </div>
+          <div className="stat-box" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div className="stat-label">Total Received</div>
+            <div className="text-xl font-bold text-success">{currency}{member?.received.toFixed(2)}</div>
+          </div>
+          <div className="stat-box col-span-2" style={{ background: isMarkingComplete ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.03)' }}>
+            <div className="stat-label">Remaining Balance</div>
+            <div className={`text-2xl font-bold ${member?.remaining < 0 ? 'text-danger' : (member?.remaining > 0 ? 'text-success' : '')}`}>
+              {currency}{Math.abs(member?.remaining).toFixed(2)} {member?.remaining < 0 ? '(Due)' : (member?.remaining > 0 ? '(Change)' : '')}
+            </div>
+          </div>
+        </div>
+
+        <p className="text-sm text-muted italic">
+          {isMarkingComplete 
+            ? "Marking as completed will strike the name and visually indicate they are done with all expenses for this session."
+            : "This will unmark the member as completed and restore normal visibility."
+          }
+        </p>
+
+        <div className="flex justify-end gap-3 mt-2">
+          <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+          <button 
+            type="button" 
+            className={`btn ${isMarkingComplete ? 'btn-primary' : 'btn-secondary'}`} 
+            onClick={() => handleToggleMemberCompletion(memberId)}
+            style={isMarkingComplete ? { background: 'var(--success)', boxShadow: '0 8px 16px -4px rgba(16, 185, 129, 0.4)' } : {}}
+          >
+            {isMarkingComplete ? 'Yes, Complete' : 'Restore Member'}
+          </button>
         </div>
       </div>
     );
