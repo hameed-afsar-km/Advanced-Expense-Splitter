@@ -267,8 +267,7 @@ function App() {
           'Expense Amount': m.expense,
           'To Give': m.toGive,
           'To Get': m.toGet,
-          'Remaining Balance': m.remaining,
-          'Is Completed': m.isCompleted ? 'Yes' : 'No'
+          'Remaining Balance': m.remaining
         });
       });
     });
@@ -324,8 +323,7 @@ function App() {
             expense: rm['Expense Amount'] || 0,
             toGive: rm['To Give'] || 0,
             toGet: rm['To Get'] || 0,
-            remaining: rm['Remaining Balance'] || 0,
-            isCompleted: rm['Is Completed'] === 'Yes'
+            remaining: rm['Remaining Balance'] || 0
           }));
           const tripLogs = rawLogs.filter(rl => rl['Trip ID'] === tripId).map(rl => ({
             id: rl['Log ID'],
@@ -375,7 +373,7 @@ function App() {
     const name = formData.get('name');
     updateTrip(currentTripId, t => ({
       ...t,
-      members: [...t.members, { id: crypto.randomUUID(), name, received: 0, expense: 0, toGive: 0, toGet: 0, remaining: 0, isCompleted: false }]
+      members: [...t.members, { id: crypto.randomUUID(), name, received: 0, expense: 0, toGive: 0, toGet: 0, remaining: 0 }]
     }));
     closeModal();
   };
@@ -507,20 +505,20 @@ function App() {
   const handleToggleMemberCompletion = (memberId) => {
     updateTrip(currentTripId, trip => {
       const member = trip.members.find(m => m.id === memberId);
-      const newStatus = !member.isCompleted;
+      const newCompletedState = !member.isCompleted;
       const newLog = { 
         id: crypto.randomUUID(), 
         date: new Date().toISOString(), 
-        action: newStatus ? 'Marked Completed' : 'Unmarked Completed', 
-        description: `${member?.name} marked as ${newStatus ? 'completed' : 'incomplete'}.`, 
+        action: newCompletedState ? 'Mark Configured' : 'Unmark Configured', 
+        description: `${member?.name} was marked as ${newCompletedState ? 'completed' : 'incomplete'}.`, 
         memberIds: [memberId] 
       };
       return {
         ...trip,
-        members: trip.members.map(m => m.id === memberId ? { ...m, isCompleted: newStatus } : m),
+        members: trip.members.map(m => m.id === memberId ? { ...m, isCompleted: newCompletedState } : m),
         logs: [...(trip.logs || []), newLog]
       };
-    }, `Member ${newStatus ? 'completed' : 'uncompleted'}`);
+    });
     closeModal();
   };
 
@@ -531,7 +529,8 @@ function App() {
   const modalHandlers = {
     handleCreateTrip, handleAddMember, handleAddExpense, handleAddAmount, handleToGive, handleToGet,
     handleEditMember, handleEditTrip, handleDeleteTrip, handleIndividualDeleteFinal,
-    handleClearAllTripsFinal, handleResetStats, handleResetMemberStats, handleDeleteMember, handleToggleMemberCompletion
+    handleClearAllTripsFinal, handleResetStats, handleResetMemberStats, handleDeleteMember,
+    handleToggleMemberCompletion
   };
 
   const settingsProps = {
